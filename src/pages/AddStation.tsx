@@ -1,3 +1,4 @@
+import { API_BASE } from "../config/api";
 import { useEffect, useState } from "react";
 import PageBreadcrumb from "../components/common/PageBreadCrumb";
 import PageMeta from "../components/common/PageMeta";
@@ -86,14 +87,14 @@ export default function AddStation() {
   const token = localStorage.getItem("token");
 
   const fetchStations = async () => {
-    const res = await fetch("http://localhost:5000/devices", {
+    const res = await fetch(`${API_BASE}/devices`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (res.ok) setStations(await res.json());
   };
 
   const fetchUsers = async () => {
-    const res = await fetch("http://localhost:5000/users", {
+    const res = await fetch(`${API_BASE}/users`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (res.ok) setUsers(await res.json());
@@ -144,8 +145,8 @@ export default function AddStation() {
     setLoading(true);
     try {
       const url = editingId
-        ? `http://localhost:5000/devices/${editingId}`
-        : "http://localhost:5000/devices";
+        ? `${API_BASE}/devices/${editingId}`
+        : `${API_BASE}/devices`;
       const res = await fetch(url, {
         method: editingId ? "PUT" : "POST",
         headers: {
@@ -173,7 +174,7 @@ export default function AddStation() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this station?")) return;
-    const res = await fetch(`http://localhost:5000/devices/${id}`, {
+    const res = await fetch(`${API_BASE}/devices/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });

@@ -1,3 +1,4 @@
+import { API_BASE } from "../config/api";
 import { useEffect, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
@@ -115,7 +116,7 @@ export default function MapComponent() {
       const token = localStorage.getItem("token");
       if (!token) return;
       try {
-        const res = await fetch("http://localhost:5000/my-devices", {
+        const res = await fetch(`${API_BASE}/my-devices`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) throw new Error("Failed to fetch devices");
@@ -140,7 +141,7 @@ export default function MapComponent() {
     setSelected(m);
     setInfo(null);
     try {
-      const res = await fetch(`http://localhost:5000/device-info/${m.deviceId}`);
+      const res = await fetch(`${API_BASE}/device-info/${m.deviceId}`);
       if (!res.ok) throw new Error("Failed to fetch device info");
       setInfo(await res.json());
     } catch (err) {

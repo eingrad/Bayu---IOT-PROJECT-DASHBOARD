@@ -1,3 +1,4 @@
+import { API_BASE } from "../config/api";
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import PageBreadcrumb from "../components/common/PageBreadCrumb";
@@ -9,7 +10,7 @@ import Button from "../components/ui/button/Button";
 /* ------------------------------------------------------------------ */
 
 const STORAGE_KEY = "bayu-units";
-const API = "http://localhost:5000";
+const API = API_BASE;
 
 type ParamDef = {
   key: string;

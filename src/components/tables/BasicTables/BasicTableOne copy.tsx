@@ -1,3 +1,4 @@
+import { API_BASE } from "../../../config/api";
 import { useEffect, useState, Fragment } from "react";
 import { Modal } from "../../ui/modal";
 import Button from "../../ui/button/Button";
@@ -61,7 +62,7 @@ export default function BasicTableOneX() {
   });
 
   useEffect(() => {
-    fetch("http://localhost:5000/users", {
+    fetch(`${API_BASE}/users`, {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     })
       .then((r) => r.json())
@@ -70,7 +71,7 @@ export default function BasicTableOneX() {
   }, []);
 
   useEffect(() => {
-    fetch("http://localhost:5000/companies", {
+    fetch(`${API_BASE}/companies`, {
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     })
       .then((r) => r.json())
@@ -107,8 +108,8 @@ export default function BasicTableOneX() {
     setLoading(true);
     try {
       const url = editingId
-        ? `http://localhost:5000/users/${editingId}`
-        : "http://localhost:5000/users";
+        ? `${API_BASE}/users/${editingId}`
+        : `${API_BASE}/users`;
       const res = await fetch(url, {
         method: editingId ? "PUT" : "POST",
         headers: {
@@ -145,7 +146,7 @@ export default function BasicTableOneX() {
 
   const handleDeleteUser = async (id: string) => {
     if (!confirm("Delete this user?")) return;
-    const res = await fetch(`http://localhost:5000/users/${id}`, {
+    const res = await fetch(`${API_BASE}/users/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
     });

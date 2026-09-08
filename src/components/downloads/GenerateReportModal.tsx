@@ -1,3 +1,4 @@
+import { API_BASE } from "../../config/api";
 import { useState } from "react";
 import { saveAs } from "file-saver";
 import Flatpickr from "react-flatpickr";
@@ -30,7 +31,7 @@ const FIELD_LABELS: Record<string, string> = {
   tsp: "TSP",
 };
 
-const API = "http://localhost:5000";
+const API = API_BASE;
 const inputClass =
   "w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/40";
 const pickerClass =

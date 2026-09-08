@@ -1,4 +1,10 @@
 # Frontend build context ignores
+
+# Secrets — must never be copied into the image by `COPY . .`
+.env
+.env.*
+!.env.example
+
 node_modules
 **/node_modules
 dist
@@ -8,11 +14,18 @@ dist-ssr
 server
 public-api
 
+# Runs on the Raspberry Pi, not part of this image
+logger-portal
+
+# Large archives that would otherwise bloat the build context
+*.zip
+
 # Misc
 .git
 .gitignore
 *.md
 Dockerfile
 docker-compose.yml
+# (no Caddyfile — routing lives in nginx.conf, which the image needs)
 .dockerignore
 *.local

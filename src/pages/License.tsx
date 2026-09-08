@@ -1,3 +1,4 @@
+import { API_BASE } from "../config/api";
 import { useEffect, useState } from "react";
 import PageBreadcrumb from "../components/common/PageBreadCrumb";
 import PageMeta from "../components/common/PageMeta";
@@ -53,7 +54,7 @@ export default function License() {
     const fetchLicense = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await fetch("http://localhost:5000/license", {
+        const res = await fetch(`${API_BASE}/license`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {

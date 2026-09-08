@@ -1,8 +1,9 @@
+import { PUBLIC_API_BASE } from "../config/api";
 import { useState } from "react";
 import PageBreadcrumb from "../components/common/PageBreadCrumb";
 import PageMeta from "../components/common/PageMeta";
 
-const BASE = "http://localhost:5050";
+const BASE = PUBLIC_API_BASE;
 const POSTMAN = `${BASE}/files/Dasuto_Public_API_v1_Wind_and_Particle.postman_collection.json`;
 
 const cardBase =

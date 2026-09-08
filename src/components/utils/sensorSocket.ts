@@ -1,3 +1,4 @@
+import { wsUrl } from "../../config/api";
 type DataListener = (data: any, topic: string) => void;
 
 const listeners = new Set<DataListener>();
@@ -11,7 +12,7 @@ const lastByTopic = new Map<string, any>();
 export function startSensorSocket() {
   if (socket && socket.readyState <= 1) return; // Already connected or connecting
 
-  socket = new WebSocket("ws://localhost:5000");
+  socket = new WebSocket(wsUrl());
 
   socket.onopen = () => {
     console.log("🌐 WebSocket connected to sensor server");

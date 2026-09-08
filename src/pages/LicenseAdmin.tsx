@@ -1,3 +1,4 @@
+import { API_BASE } from "../config/api";
 import { useState, useEffect } from "react";
 import PageBreadcrumb from "../components/common/PageBreadCrumb";
 import PageMeta from "../components/common/PageMeta";
@@ -84,14 +85,14 @@ export default function AdminLicensePage() {
   const token = localStorage.getItem("token");
 
   const fetchUsers = async () => {
-    const res = await fetch("http://localhost:5000/users", {
+    const res = await fetch(`${API_BASE}/users`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (res.ok) setUsers(await res.json());
   };
 
   const fetchLicenses = async () => {
-    const res = await fetch("http://localhost:5000/licenses", {
+    const res = await fetch(`${API_BASE}/licenses`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (res.ok) {
@@ -107,7 +108,7 @@ export default function AdminLicensePage() {
 
   const handleAssign = async (licenseId: string) => {
     const userId: string | null = assignments[licenseId] || null;
-    const res = await fetch("http://localhost:5000/licenses/assign", {
+    const res = await fetch(`${API_BASE}/licenses/assign`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -123,7 +124,7 @@ export default function AdminLicensePage() {
     e.preventDefault();
     setCreating(true);
     try {
-      const res = await fetch("http://localhost:5000/licenses", {
+      const res = await fetch(`${API_BASE}/licenses`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -158,7 +159,7 @@ export default function AdminLicensePage() {
 
   const handleDeleteLicense = async (id: string) => {
     if (!confirm("Delete this license?")) return;
-    const res = await fetch(`http://localhost:5000/licenses/${id}`, {
+    const res = await fetch(`${API_BASE}/licenses/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });

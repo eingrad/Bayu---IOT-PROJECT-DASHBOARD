@@ -1,39 +1,58 @@
-# Bayu Sense - full stack (db + server + public-api + frontend)
-# Usage:
-#   docker compose up --build        # build & start everything
-#   docker compose down              # stop (keeps DB data)
-#   docker compose down -v           # stop & WIPE the database (re-runs database.sql on next up)
+# Bayu Sense - full stack (cloudflared + db + server + public-api + frontend)
 #
-# URLs once running:
-#   Frontend    -> http://localhost:8080
-#   Main API    -> http://localhost:5000   (also WebSocket ws://localhost:5000)
-#   Public API  -> http://localhost:5050
-#   Postgres    -> localhost:5432          (db: bayu_sense)
+# Setup:
+#   cp .env.example .env      # then fill in real values
+#   ./preflight.sh            # collision check
+#   docker compose up -d --build
+#
+# Usage:
+#   docker compose logs -f            # follow all logs
+#   docker compose down               # stop (keeps DB data)
+#   docker compose down -v            # stop & WIPE the database
+#                                     # (re-runs database.sql on next up)
+#
+# This stack publishes NO host ports at all. Cloudflare reaches the frontend
+# through this project's own cloudflared container over the compose network,
+# the same way aqms and aquamind already work on this server. That means there
+# is nothing to collide with the other projects — no port, no bind address.
+#
+# The compose project name groups and prefixes every resource (network, volume,
+# images), keeping this separate from the other stacks on the host.
 
-# Compose project name -> groups & prefixes all resources so this project
-# stays separate from your other Docker projects on the same machine.
 name: bayu-sense
 
 services:
+  # Each project on this server runs its own tunnel; this is ours.
+  # Create a tunnel in Zero Trust -> Networks -> Tunnels, copy its token into
+  # .env, and add a public hostname pointing at  http://frontend:80
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: bayu-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - frontend
+
   db:
     image: postgres:16
     container_name: bayu-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: bayu_sense
-    ports:
-      # Host 5434 (5432/5433 already used by your other projects) -> container 5432.
-      # App containers still connect internally on db:5432 (unchanged).
-      - "5434:5432"
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    # Deliberately not published. Use `docker compose exec db psql -U postgres
+    # bayu_sense` for a shell, or see DEPLOYMENT.md to expose it temporarily.
+    expose:
+      - "5432"
     volumes:
       - bayu-db-data:/var/lib/postgresql/data
       # These run automatically ONLY on first init (empty volume), in order.
       - ./server/database.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
       - ./server/app-tables.sql:/docker-entrypoint-initdb.d/02-app-tables.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d bayu_sense"]
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -52,22 +71,22 @@ services:
     environment:
       DB_HOST: db                       # service name, not localhost
       DB_PORT: "5432"
-      DB_NAME: bayu_sense
-      DB_ADMIN_USER: app_admin
-      DB_ADMIN_PASS: "bayu_admin_pass!"
-      DB_USER: app_user
-      DB_USER_PASS: "bayu_user_pass!"
-      JWT_SECRET: "mZ5vY3T8k9LmPfqXhrF+8JZTgWoQe1/CbsHnIb4j4hY="
-      TELEGRAM_BOT_TOKEN: "8173113414:AAHTyRyDOfJF1ST4DAHwRYfN7UlWbaNqS-c"
-      NGROK_AUTHTOKEN: "2xIJGCyZrOOEaO1KPEE5ddfO2pW_QwNKjvTwApGbAeFpWc69"
-      # MQTT — HiveMQ Cloud (TLS, port 8883)
-      MQTT_BROKER_URL: "mqtts://02376c7baed24520a4341dc75f965cb2.s1.eu.hivemq.cloud:8883"
-      MQTT_USERNAME: "ArifOthman"
-      MQTT_PASSWORD: "Arif12345"
+      DB_NAME: ${POSTGRES_DB}
+      DB_ADMIN_USER: ${DB_ADMIN_USER}
+      DB_ADMIN_PASS: ${DB_ADMIN_PASS}
+      DB_USER: ${DB_USER}
+      DB_USER_PASS: ${DB_USER_PASS}
+      JWT_SECRET: ${JWT_SECRET}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      # MQTT — HiveMQ Cloud (outbound TLS, port 8883). Unrelated to the
+      # mosquitto brokers the other two projects run internally.
+      MQTT_BROKER_URL: ${MQTT_BROKER_URL}
+      MQTT_USERNAME: ${MQTT_USERNAME}
+      MQTT_PASSWORD: ${MQTT_PASSWORD}
       # Average incoming readings over this window before writing one DB row.
-      AGG_INTERVAL_MS: "300000" # 5 minutes
-    ports:
-      - "5000:5000"
+      AGG_INTERVAL_MS: ${AGG_INTERVAL_MS:-300000}
+    expose:
+      - "5000"
 
   public-api:
     build: ./public-api
@@ -79,15 +98,15 @@ services:
     environment:
       DB_HOST: db
       DB_PORT: "5432"
-      DB_NAME: bayu_sense
-      DB_USER: app_user
-      DB_PASS: "bayu_user_pass!"
-      DB_ADMIN_USER: app_admin
-      DB_ADMIN_PASS: "bayu_admin_pass!"
-      API_KEY: "bayu-public-key-123"
-      JWT_SECRET: "super-secret-jwt-key"
-    ports:
-      - "5050:5050"
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_USER_PASS}
+      DB_ADMIN_USER: ${DB_ADMIN_USER}
+      DB_ADMIN_PASS: ${DB_ADMIN_PASS}
+      API_KEY: ${PUBLIC_API_KEY}
+      JWT_SECRET: ${PUBLIC_API_JWT_SECRET}
+    expose:
+      - "5050"
 
   frontend:
     build: .
@@ -96,8 +115,10 @@ services:
     depends_on:
       - server
       - public-api
-    ports:
-      - "8080:80"
+    # The tunnel's entry point, reachable only inside this compose network.
+    # Point the Cloudflare public hostname at  http://frontend:80
+    expose:
+      - "80"
 
 volumes:
   bayu-db-data:

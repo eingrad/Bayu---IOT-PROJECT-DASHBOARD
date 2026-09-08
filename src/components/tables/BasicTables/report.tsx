@@ -1,3 +1,4 @@
+import { API_BASE } from "../../../config/api";
 import React, { useState } from "react";
 import { saveAs } from "file-saver";
 
@@ -16,7 +17,7 @@ const ReportViewer: React.FC = () => {
 
     const token = localStorage.getItem("token");
 
-    const response = await fetch(`http://localhost:5000/report/pdf?${params}`, {
+    const response = await fetch(`${API_BASE}/report/pdf?${params}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 

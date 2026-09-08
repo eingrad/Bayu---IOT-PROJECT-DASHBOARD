@@ -1,3 +1,4 @@
+import { API_BASE } from "../config/api";
 import { useState, useEffect } from "react";
 import PageBreadcrumb from "../components/common/PageBreadCrumb";
 import PageMeta from "../components/common/PageMeta";
@@ -58,7 +59,7 @@ export default function AlertSetup() {
   const token = localStorage.getItem("token");
 
   const fetchRules = async () => {
-    const res = await fetch("http://localhost:5000/alert-rules", {
+    const res = await fetch(`${API_BASE}/alert-rules`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (res.ok) setRules(await res.json());
@@ -72,7 +73,7 @@ export default function AlertSetup() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/alert-rule", {
+      const res = await fetch(`${API_BASE}/alert-rule`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -15,4 +15,26 @@ export default defineConfig({
       },
     }),
   ],
+  // The app calls relative paths (/api, /public-api, /ws) so the built bundle
+  // has no hostname baked in. In production the frontend's nginx routes them;
+  // in dev this proxy does the same job against locally running backends.
+  server: {
+    proxy: {
+      "/api": {
+        target: "http://localhost:5000",
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/api/, ""),
+      },
+      "/public-api": {
+        target: "http://localhost:5050",
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/public-api/, ""),
+      },
+      "/ws": {
+        target: "ws://localhost:5000",
+        ws: true,
+        rewrite: (p) => p.replace(/^\/ws/, ""),
+      },
+    },
+  },
 });

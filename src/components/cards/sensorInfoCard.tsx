@@ -1,3 +1,4 @@
+import { API_BASE } from "../../config/api";
 import { useEffect, useState } from "react";
 import DeviceImage from "../../icons/dasuto-device.svg";
 
@@ -23,7 +24,7 @@ export default function SensorInfoCard() {
       return;
     }
 
-    fetch(`http://localhost:5000/device/${SENSOR_ID}`, {
+    fetch(`${API_BASE}/device/${SENSOR_ID}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(async (res) => {

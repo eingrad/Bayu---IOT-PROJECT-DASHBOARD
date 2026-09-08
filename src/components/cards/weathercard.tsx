@@ -1,3 +1,4 @@
+import { API_BASE } from "../../config/api";
 import { useEffect, useState } from "react";
 
 interface DailyForecast {
@@ -79,7 +80,7 @@ const WeatherForecast = () => {
       );
 
     if (token) {
-      fetch("http://localhost:5000/my-devices", {
+      fetch(`${API_BASE}/my-devices`, {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then((res) => (res.ok ? res.json() : []))

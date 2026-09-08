@@ -1,3 +1,4 @@
+import { API_BASE } from "../../../config/api";
 import {
   Table,
   TableBody,
@@ -41,7 +42,7 @@ export default function CSV() {
         ? `/download/wind-data?${query}`
         : `/download/particle-data?${query}`;
 
-    const response = await fetch(`http://localhost:5000${endpoint}`, {
+    const response = await fetch(`${API_BASE}${endpoint}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
