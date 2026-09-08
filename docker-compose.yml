@@ -1,0 +1,103 @@
+# Bayu Sense - full stack (db + server + public-api + frontend)
+# Usage:
+#   docker compose up --build        # build & start everything
+#   docker compose down              # stop (keeps DB data)
+#   docker compose down -v           # stop & WIPE the database (re-runs database.sql on next up)
+#
+# URLs once running:
+#   Frontend    -> http://localhost:8080
+#   Main API    -> http://localhost:5000   (also WebSocket ws://localhost:5000)
+#   Public API  -> http://localhost:5050
+#   Postgres    -> localhost:5432          (db: bayu_sense)
+
+# Compose project name -> groups & prefixes all resources so this project
+# stays separate from your other Docker projects on the same machine.
+name: bayu-sense
+
+services:
+  db:
+    image: postgres:16
+    container_name: bayu-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: bayu_sense
+    ports:
+      # Host 5434 (5432/5433 already used by your other projects) -> container 5432.
+      # App containers still connect internally on db:5432 (unchanged).
+      - "5434:5432"
+    volumes:
+      - bayu-db-data:/var/lib/postgresql/data
+      # These run automatically ONLY on first init (empty volume), in order.
+      - ./server/database.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./server/app-tables.sql:/docker-entrypoint-initdb.d/02-app-tables.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d bayu_sense"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  server:
+    build: ./server
+    container_name: bayu-server
+    restart: unless-stopped
+    # Chromium (Puppeteer PDF) crashes under Docker's default seccomp profile
+    # because it blocks the clone3 syscall — relax it for this container.
+    security_opt:
+      - seccomp:unconfined
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db                       # service name, not localhost
+      DB_PORT: "5432"
+      DB_NAME: bayu_sense
+      DB_ADMIN_USER: app_admin
+      DB_ADMIN_PASS: "bayu_admin_pass!"
+      DB_USER: app_user
+      DB_USER_PASS: "bayu_user_pass!"
+      JWT_SECRET: "mZ5vY3T8k9LmPfqXhrF+8JZTgWoQe1/CbsHnIb4j4hY="
+      TELEGRAM_BOT_TOKEN: "8173113414:AAHTyRyDOfJF1ST4DAHwRYfN7UlWbaNqS-c"
+      NGROK_AUTHTOKEN: "2xIJGCyZrOOEaO1KPEE5ddfO2pW_QwNKjvTwApGbAeFpWc69"
+      # MQTT — HiveMQ Cloud (TLS, port 8883)
+      MQTT_BROKER_URL: "mqtts://02376c7baed24520a4341dc75f965cb2.s1.eu.hivemq.cloud:8883"
+      MQTT_USERNAME: "ArifOthman"
+      MQTT_PASSWORD: "Arif12345"
+      # Average incoming readings over this window before writing one DB row.
+      AGG_INTERVAL_MS: "300000" # 5 minutes
+    ports:
+      - "5000:5000"
+
+  public-api:
+    build: ./public-api
+    container_name: bayu-public-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: bayu_sense
+      DB_USER: app_user
+      DB_PASS: "bayu_user_pass!"
+      DB_ADMIN_USER: app_admin
+      DB_ADMIN_PASS: "bayu_admin_pass!"
+      API_KEY: "bayu-public-key-123"
+      JWT_SECRET: "super-secret-jwt-key"
+    ports:
+      - "5050:5050"
+
+  frontend:
+    build: .
+    container_name: bayu-frontend
+    restart: unless-stopped
+    depends_on:
+      - server
+      - public-api
+    ports:
+      - "8080:80"
+
+volumes:
+  bayu-db-data:

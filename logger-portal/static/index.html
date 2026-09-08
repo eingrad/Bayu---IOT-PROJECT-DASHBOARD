@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bayu Logger — Settings</title>
+<style>
+  :root{
+    --bg:#f4f6fb; --panel:#ffffff; --ink:#1f2a44; --muted:#6b7691;
+    --line:#e6e9f2; --brand:#3b5bfd; --brand-ink:#fff;
+    --ok:#16a34a; --warn:#d97706; --bad:#dc2626; --chip:#eef1fb;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{ --bg:#0e1220; --panel:#151b2e; --ink:#e8ecf7; --muted:#8b95b3;
+      --line:#232b45; --brand:#5b73ff; --chip:#1b2338; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  a{color:var(--brand)}
+  .app{display:flex;min-height:100vh}
+  /* sidebar */
+  .side{width:230px;background:var(--panel);border-right:1px solid var(--line);
+    padding:20px 14px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:6px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;padding:4px 8px 16px}
+  .dot{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,#3b5bfd,#22d3ee)}
+  .nav{display:flex;flex-direction:column;gap:2px}
+  .nav button{all:unset;display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:10px;
+    color:var(--muted);cursor:pointer;font-weight:600}
+  .nav button:hover{background:var(--chip);color:var(--ink)}
+  .nav button.active{background:var(--brand);color:var(--brand-ink)}
+  .side .foot{margin-top:auto;font-size:12px;color:var(--muted);padding:8px}
+  /* main */
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .top{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:16px 24px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:5}
+  .top h1{font-size:18px;margin:0}
+  .top .sub{color:var(--muted);font-size:12px}
+  .badges{display:flex;gap:8px;flex-wrap:wrap}
+  .content{padding:24px;max-width:1000px;width:100%}
+  .view{display:none} .view.active{display:block}
+  /* bits */
+  .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .card h3{margin:0 0 4px;font-size:13px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+  .card .big{font-size:26px;font-weight:700}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;margin-bottom:18px}
+  .panel h2{margin:0 0 4px;font-size:16px}
+  .panel p.hint{margin:0 0 16px;color:var(--muted);font-size:13px}
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600;background:var(--chip);color:var(--muted)}
+  .badge.ok{background:rgba(22,163,74,.14);color:var(--ok)} .badge.warn{background:rgba(217,119,6,.14);color:var(--warn)}
+  .badge.bad{background:rgba(220,38,38,.14);color:var(--bad)}
+  .badge i{width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block}
+  .banner{padding:12px 15px;border-radius:12px;font-weight:600;font-size:13px;margin-bottom:16px;line-height:1.7}
+  .banner.ok{background:rgba(22,163,74,.12);color:var(--ok);border:1px solid rgba(22,163,74,.3)}
+  .banner.warn{background:rgba(217,119,6,.12);color:var(--warn);border:1px solid rgba(217,119,6,.3)}
+  .banner.bad{background:rgba(220,38,38,.12);color:var(--bad);border:1px solid rgba(220,38,38,.3)}
+  .grouphdr{margin:28px 0 14px;font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--brand);border-bottom:1px solid var(--line);padding-bottom:8px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+  td.mono{font-variant-numeric:tabular-nums;font-family:ui-monospace,Menlo,monospace}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  label{display:block;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px}
+  input,select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--ink);font:inherit}
+  .field{margin-bottom:14px}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+  button.btn{all:unset;cursor:pointer;padding:10px 16px;border-radius:10px;font-weight:600;background:var(--brand);color:#fff;text-align:center}
+  button.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+  button.btn.danger{background:var(--bad)}
+  button.btn:disabled{opacity:.5;cursor:not-allowed}
+  pre.log{background:#0b1020;color:#c9d4f5;border-radius:12px;padding:14px;max-height:340px;overflow:auto;font-size:12px;white-space:pre-wrap}
+  .toast{position:fixed;right:20px;bottom:20px;background:var(--ink);color:var(--bg);padding:12px 16px;border-radius:12px;opacity:0;transform:translateY(8px);transition:.2s}
+  .toast.show{opacity:1;transform:none}
+  .switch{display:flex;align-items:center;gap:8px}
+  @media(max-width:760px){.side{position:fixed;left:-240px;transition:.2s;z-index:20}.side.open{left:0}.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side" id="side">
+    <div class="brand"><span class="dot"></span> Bayu Logger</div>
+    <nav class="nav" id="nav">
+      <button data-view="overview" class="active">Overview</button>
+      <button data-view="live">Live &amp; Diagnostics</button>
+      <button data-view="calib">Calibration</button>
+      <button data-view="system">System &amp; Connections</button>
+    </nav>
+    <div class="foot" id="devfoot">—</div>
+  </aside>
+
+  <div class="main">
+    <header class="top">
+      <div>
+        <h1 id="devname">Bayu Logger</h1>
+        <div class="sub" id="devsub">Local settings portal</div>
+      </div>
+      <div class="badges" id="topbadges"></div>
+    </header>
+
+    <div class="content">
+      <!-- OVERVIEW -->
+      <section class="view active" id="view-overview">
+        <div id="ov_banner"></div>
+        <div class="grid" id="healthgrid"></div>
+      </section>
+
+      <!-- LIVE -->
+      <section class="view" id="view-live">
+        <div class="panel">
+          <h2>Gas — live readings</h2>
+          <p class="hint">From the Python gas reader. Raw electrode voltages (OP1/OP2) are the fastest way to spot a failing cell.</p>
+          <table><thead><tr><th>Sensor</th><th>Value</th><th>OP1_V</th><th>OP2_V</th><th>Level</th></tr></thead>
+            <tbody id="livebody"><tr><td colspan="5">Waiting for data…</td></tr></tbody></table>
+        </div>
+        <div class="panel">
+          <h2>Particulate &amp; weather</h2>
+          <p class="hint">Collected by the <b>Node-RED</b> flows and read live from the local broker.</p>
+          <div id="pmweather">
+            <table><tbody><tr><td>Waiting…</td></tr></tbody></table>
+          </div>
+        </div>
+        <div class="panel">
+          <h2>I²C bus</h2>
+          <p class="hint">Expected: <b>0x48</b> (ADS1015) and <b>0x49</b> (ADS1115).</p>
+          <div id="i2cbadges" class="badges"></div>
+        </div>
+      </section>
+
+      <!-- CALIBRATION -->
+      <section class="view" id="view-calib">
+        <div class="panel">
+          <h2>Zero calibration</h2>
+          <p class="hint">Expose all sensors to clean air, then run. The reader is paused, <code>zero_cal.py</code> captures new baselines, and the reader restarts automatically.</p>
+          <div class="actions"><button class="btn" id="btnZero">Run zero calibration</button></div>
+        </div>
+        <div class="panel">
+          <h2>Sensor parameters</h2>
+          <p class="hint">Signed sensitivity (mV/ppm) and field-calibrated zeros. Thresholds are [GOOD, MODERATE] upper bounds.</p>
+          <div id="sensorForms"></div>
+          <div class="actions"><button class="btn" id="btnSaveSensors">Save</button>
+            <button class="btn ghost" id="btnSaveSensorsRestart">Save &amp; restart reader</button></div>
+        </div>
+      </section>
+
+      <!-- SYSTEM & CONNECTIONS (merged) -->
+      <section class="view" id="view-system">
+
+        <div class="grouphdr" style="margin-top:0">Gas sensor · Python reader</div>
+
+        <div class="panel">
+          <h2>Gas reader — power</h2>
+          <p class="hint">Turn the Python gas-sensor script on or off. State: <span class="badge" id="svcState">—</span></p>
+          <div class="actions">
+            <button class="btn" data-svc="start">Start</button>
+            <button class="btn ghost" data-svc="restart">Restart</button>
+            <button class="btn danger" data-svc="stop">Stop</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Gas reader — broker <span style="color:var(--muted);font-weight:400;font-size:13px">(where gas is sent)</span></h2>
+          <p class="hint">The MQTT broker the gas script publishes its readings to. Test before saving.</p>
+          <div class="row">
+            <div class="field"><label>Broker host</label><input id="m_broker"></div>
+            <div class="field"><label>Port</label><input id="m_port" type="number"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label>Username</label><input id="m_user"></div>
+            <div class="field"><label>Password</label><input id="m_pass" type="password" placeholder="•••••• (unchanged)"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label>Topic prefix</label><input id="m_prefix"></div>
+            <div class="field"><label>QoS</label><select id="m_qos"><option>0</option><option>1</option><option>2</option></select></div>
+          </div>
+          <div class="field switch"><input type="checkbox" id="m_tls" style="width:auto"> <label style="margin:0">Use TLS (port 8883)</label></div>
+          <div class="field switch"><input type="checkbox" id="m_retain" style="width:auto"> <label style="margin:0">Retain last message</label></div>
+          <div class="actions">
+            <button class="btn ghost" id="btnTest">Test connection</button>
+            <button class="btn" id="btnSaveMqtt">Save &amp; restart reader</button>
+            <span class="badge" id="testResult" style="display:none"></span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Gas reader — sampling</h2>
+          <p class="hint">How often the gas script samples, and how many readings it averages per report.</p>
+          <div class="row">
+            <div class="field"><label>Interval (seconds)</label><input id="s_interval" type="number"></div>
+            <div class="field"><label>Averaged samples</label><input id="s_avg" type="number"></div>
+          </div>
+          <div class="actions"><button class="btn" id="btnSaveSampling">Save &amp; restart reader</button></div>
+        </div>
+
+        <div class="panel">
+          <h2>Gas reader — logs</h2>
+          <p class="hint">Recent output from the gas reader service.</p>
+          <div class="actions" style="margin-bottom:12px"><button class="btn ghost" id="btnLogs">Refresh logs</button></div>
+          <pre class="log" id="logbox">—</pre>
+        </div>
+
+        <div class="grouphdr">Particulate &amp; weather · Node-RED</div>
+
+        <div class="panel">
+          <h2>Node-RED — power</h2>
+          <p class="hint">Runs the particulate &amp; weather flows (and their broker connection).
+            State: <span class="badge" id="nrState">—</span> <span class="badge" id="nrBroker">—</span></p>
+          <div class="actions">
+            <button class="btn" data-nrsvc="start">Start</button>
+            <button class="btn ghost" data-nrsvc="restart">Restart</button>
+            <button class="btn danger" data-nrsvc="stop">Stop</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Node-RED — broker <span style="color:var(--muted);font-weight:400;font-size:13px">(where particulate &amp; weather are sent)</span></h2>
+          <p class="hint">The <code>mqtt-broker</code> connection your <code>mqtt out</code> nodes use. Saving deploys to Node-RED immediately — no restart.</p>
+          <div id="brokerForm"><p class="hint">Loading…</p></div>
+          <div class="actions"><button class="btn" id="btnSaveBroker">Save &amp; deploy</button></div>
+        </div>
+
+        <div class="grouphdr">This dashboard</div>
+
+        <div class="panel">
+          <h2>Live data source <span style="color:var(--muted);font-weight:400;font-size:13px">(where this portal reads from)</span></h2>
+          <p class="hint">Where <b>this portal</b> subscribes to show the live readings. Leave host blank to reuse the gas reader's broker.</p>
+          <div class="row">
+            <div class="field"><label>Broker host</label><input id="lb_host" placeholder="(same as gas reader)"></div>
+            <div class="field"><label>Port</label><input id="lb_port" type="number"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label>Username</label><input id="lb_user"></div>
+            <div class="field"><label>Password</label><input id="lb_pass" type="password" placeholder="(unchanged)"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label>Topic prefix</label><input id="lb_prefix" placeholder="(use reader's)"></div>
+            <div class="field"><label>Security</label><div class="switch" style="padding-top:8px"><input type="checkbox" id="lb_tls" style="width:auto"> <span style="color:var(--muted);font-size:13px">Use TLS (HiveMQ = on)</span></div></div>
+          </div>
+          <div class="actions">
+            <button class="btn ghost" id="lb_same">Same as gas reader</button>
+            <button class="btn ghost" id="lb_test">Test</button>
+            <button class="btn" id="lb_save">Save &amp; reconnect</button>
+            <span class="badge" id="lb_status">—</span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Point gas reader at this broker</h2>
+          <p class="hint">Make the gas script publish to the local broker (127.0.0.1, TLS off) and restart it.</p>
+          <div class="actions"><button class="btn ghost" id="btnPointLogger">Use local broker</button></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<div id="login" style="display:none;position:fixed;inset:0;background:rgba(8,12,24,.65);align-items:center;justify-content:center;z-index:100">
+  <form id="loginForm" style="background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px;width:320px;max-width:90vw;box-shadow:0 20px 50px -20px rgba(0,0,0,.5)">
+    <h2 style="margin:0 0 4px;font-size:18px">Sign in</h2>
+    <p style="margin:0 0 18px;color:var(--muted);font-size:13px">Bayu Logger settings portal</p>
+    <div class="field"><label>Username</label><input id="li_user" value="admin" autocomplete="username"></div>
+    <div class="field"><label>Password</label><input id="li_pass" type="password" autocomplete="current-password"></div>
+    <div id="li_err" style="color:var(--bad);font-size:12px;min-height:16px;margin-bottom:8px"></div>
+    <button class="btn" style="width:100%" type="submit">Sign in</button>
+  </form>
+</div>
+
+<script>
+const $ = (s,el=document)=>el.querySelector(s);
+const $$ = (s,el=document)=>[...el.querySelectorAll(s)];
+let CONFIG = {};
+
+function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+let AUTH = sessionStorage.getItem('bayu_auth')||'';
+function showLogin(){
+  return new Promise(resolve=>{
+    const box=$('#login'); box.style.display='flex'; $('#li_err').textContent='';
+    setTimeout(()=>$('#li_pass').focus(),50);
+    $('#loginForm').onsubmit=async e=>{
+      e.preventDefault();
+      const cand=btoa($('#li_user').value+':'+$('#li_pass').value);
+      try{
+        const t=await fetch('/api/config',{headers:{Authorization:'Basic '+cand}});
+        if(t.ok){AUTH=cand;sessionStorage.setItem('bayu_auth',AUTH);box.style.display='none';resolve(true);}
+        else{$('#li_err').textContent='Invalid username or password';}
+      }catch(err){$('#li_err').textContent='Cannot reach the server';}
+    };
+  });
+}
+async function api(path,opts={}){
+  const build=()=>Object.assign({},opts,{headers:Object.assign({},opts.headers||{},AUTH?{Authorization:'Basic '+AUTH}:{})});
+  let r=await fetch(path,build());
+  if(r.status===401){await showLogin();r=await fetch(path,build());}
+  if(!r.ok)throw new Error((await r.text())||('HTTP '+r.status));
+  return r.status===204?null:r.json();
+}
+function badge(text,cls){return `<span class="badge ${cls}"><i></i>${text}</span>`;}
+function fmtUptime(s){if(s==null)return '—';const d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60);return (d?d+'d ':'')+h+'h '+m+'m';}
+
+// ---- navigation ----
+$$('#nav button').forEach(b=>b.onclick=()=>{
+  $$('#nav button').forEach(x=>x.classList.remove('active'));b.classList.add('active');
+  $$('.view').forEach(v=>v.classList.remove('active'));$('#view-'+b.dataset.view).classList.add('active');
+  if(b.dataset.view==='system'){loadNodeRed();loadLiveBroker();}
+});
+
+// ---- status / overview ----
+function cardHTML(h,v,c){
+  const col=c==='bad'?'color:var(--bad)':c==='warn'?'color:var(--warn)':c==='ok'?'color:var(--ok)':'';
+  return `<div class="card"><h3>${h}</h3><div class="big" style="${col}">${v}</div></div>`;
+}
+async function refreshStatus(){
+  let s; try{ s=await api('/api/status'); }catch(e){ return; }
+  const dev=s.device||{};
+  $('#devname').textContent=dev.name||'Bayu Logger';
+  $('#devsub').textContent=(dev.location? `${dev.location.lat}, ${dev.location.lon}`:'—')+(dev.id?` · ${dev.id.slice(0,8)}`:'');
+  $('#devfoot').innerHTML=`ID ${dev.id?dev.id.slice(0,8):'—'}<br>${dev.timezone||''}`;
+
+  const st=(s.service&&s.service.state)||'unknown';
+  const svcCls=st==='active'?'ok':(st==='failed'?'bad':'warn');
+  const nr=s.nodered||{};
+  const nrUp=!!nr.reachable;
+  const nrSt=nrUp?'running':(nr.state||'unknown');
+  const nrCls=nrUp?'ok':(nr.state==='failed'?'bad':'warn');
+  const streams=s.streams||{};
+  const freshCls=a=> a==null?'bad':(a<120?'ok':'warn');
+  const freshTxt=a=> a==null?'offline':(a<60?Math.round(a)+'s ago':Math.round(a/60)+'m ago');
+
+  // top badges
+  $('#topbadges').innerHTML =
+     badge('Gas reader '+st, svcCls) +
+     badge('Node-RED '+nrSt, nrCls) +
+     badge(nr.broker_connected?'Broker up':'Broker down', nr.broker_connected?'ok':'bad');
+  const svcEl=$('#svcState'); if(svcEl) svcEl.outerHTML=`<span class="badge ${svcCls}" id="svcState"><i></i>${st}</span>`;
+
+  // status banner
+  const issues=[];
+  if(st!=='active') issues.push('Gas reader is '+st);
+  if(!nrUp) issues.push('Node-RED not reachable');
+  if(!nr.broker_connected) issues.push('Broker not connected');
+  [['gas','Gas'],['particulate','Particulate'],['weather','Weather']].forEach(([k,label])=>{
+    const a=streams[k]; if(a==null||a>=300) issues.push(label+' data not arriving');
+  });
+  const d=s.disk||{};
+  if(d.free_gb!=null&&d.total_gb&&(d.free_gb/d.total_gb)<0.1) issues.push('Storage below 10%');
+  if(s.cpu_temp_c!=null&&s.cpu_temp_c>70) issues.push('CPU temperature high ('+s.cpu_temp_c+' °C)');
+  if(s.power&&(s.power.under_voltage||s.power.throttled)) issues.push('Power / throttling warning');
+  const critical=/not connected|failed|below 10/;
+  const lvl=issues.length? (issues.some(i=>critical.test(i))?'bad':'warn') : 'ok';
+  $('#ov_banner').innerHTML=`<div class="banner ${lvl}">`+
+    (lvl==='ok'?'✓ All systems nominal':issues.map(i=>'• '+i).join('<br>'))+`</div>`;
+
+  // grid
+  const mem=s.memory||{}, net=s.network||{}, pw=s.power;
+  const flow=[['gas','Gas'],['particulate','Particulate'],['weather','Weather']].map(([k,label])=>{
+    const a=streams[k];
+    return `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:13px"><span>${label}</span>${badge(freshTxt(a),freshCls(a))}</div>`;
+  }).join('');
+  const netSub=[net.hostname,net.ssid,net.signal?('signal '+net.signal):''].filter(Boolean).join(' · ');
+  const lowDisk=(d.free_gb!=null&&d.total_gb&&d.free_gb/d.total_gb<0.1);
+  const cards=[
+    cardHTML('Gas reader', st, svcCls),
+    cardHTML('Node-RED', nrSt, nrCls),
+    `<div class="card"><h3>Data flow</h3>${flow}</div>`,
+    cardHTML('Uptime', fmtUptime(s.uptime_s)),
+    cardHTML('CPU temp', s.cpu_temp_c!=null? s.cpu_temp_c+' °C':'—', s.cpu_temp_c>70?'warn':''),
+    cardHTML('Memory', mem.percent!=null? mem.percent+'%':'—', mem.percent>90?'warn':''),
+    cardHTML('Storage free', d.free_gb!=null? d.free_gb+' / '+d.total_gb+' GB':'—', lowDisk?'warn':''),
+    pw? cardHTML('Power', (pw.under_voltage||pw.throttled)?'Warning':'OK', (pw.under_voltage||pw.throttled)?'bad':'ok') : null,
+    `<div class="card"><h3>Network</h3><div class="big" style="font-size:18px">${net.ip||'—'}</div><div style="color:var(--muted);font-size:12px;margin-top:4px">${netSub||'&nbsp;'}</div></div>`,
+    cardHTML('I²C devices', ((s.i2c&&s.i2c.addresses)||[]).join(' ')||'none'),
+  ].filter(Boolean);
+  $('#healthgrid').innerHTML=cards.join('');
+}
+
+// ---- config into forms ----
+async function loadConfig(){
+  CONFIG=await api('/api/config');           // triggers Basic-auth prompt if enabled
+  const m=CONFIG.mqtt||{};
+  $('#m_broker').value=m.broker||'';$('#m_port').value=m.port||8883;$('#m_user').value=m.username||'';
+  $('#m_prefix').value=m.topic_prefix||'';$('#m_qos').value=m.qos??2;$('#m_tls').checked=!!m.tls;$('#m_retain').checked=!!m.retain;
+  const sp=CONFIG.sampling||{}; $('#s_interval').value=sp.interval_seconds??20; $('#s_avg').value=sp.average_samples??16;
+  renderSensorForms();
+}
+function renderSensorForms(){
+  const s=CONFIG.sensors||{};
+  $('#sensorForms').innerHTML=Object.entries(s).map(([k,v])=>`
+    <div class="panel" style="margin:0 0 12px;padding:14px">
+      <b>${(v.name||k)} <span style="color:var(--muted)">(${k.toUpperCase()}, ${v.unit||''})</span></b>
+      <div class="row" style="margin-top:10px">
+        <div class="field"><label>Sensitivity mV/ppm</label><input data-s="${k}" data-f="sensitivity" value="${v.sensitivity??''}"></div>
+        <div class="field"><label>Thresholds (GOOD,MOD)</label><input data-s="${k}" data-f="thresholds" value="${(v.thresholds||[]).join(',')}"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>WE zero (V)</label><input data-s="${k}" data-f="we_zero_v" value="${v.we_zero_v??''}"></div>
+        <div class="field"><label>AE zero (V)</label><input data-s="${k}" data-f="ae_zero_v" value="${v.ae_zero_v??''}"></div>
+      </div>
+    </div>`).join('');
+}
+function collectSensors(){
+  const out={};
+  $$('#sensorForms input').forEach(i=>{
+    const k=i.dataset.s,f=i.dataset.f;out[k]=out[k]||{};
+    out[k][f]= f==='thresholds' ? i.value.split(',').map(x=>x.trim()).filter(x=>x!=='').map(Number)
+                                : (i.value===''?null:Number(i.value));
+  });
+  return out;
+}
+
+async function saveConfig(patch,restart){
+  await api('/api/config'+(restart?'?restart=true':''),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(patch)});
+  toast(restart?'Saved — restarting reader':'Saved');
+  refreshStatus();
+}
+
+// ---- handlers ----
+$('#btnSaveMqtt').onclick=()=>{
+  const p={mqtt:{broker:$('#m_broker').value,port:+$('#m_port').value,username:$('#m_user').value,
+    topic_prefix:$('#m_prefix').value,qos:+$('#m_qos').value,tls:$('#m_tls').checked,retain:$('#m_retain').checked}};
+  if($('#m_pass').value)p.mqtt.password=$('#m_pass').value;
+  saveConfig(p,true);
+};
+$('#btnTest').onclick=async()=>{
+  const r=$('#testResult');r.style.display='inline-flex';r.className='badge warn';r.innerHTML='<i></i>Testing…';
+  try{const res=await api('/api/mqtt/test',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({broker:$('#m_broker').value,port:+$('#m_port').value,tls:$('#m_tls').checked,username:$('#m_user').value,password:$('#m_pass').value})});
+    r.className='badge '+(res.ok?'ok':'bad');r.innerHTML='<i></i>'+res.detail;
+  }catch(e){r.className='badge bad';r.innerHTML='<i></i>'+e.message;}
+};
+$('#btnSaveSensors').onclick=()=>saveConfig({sensors:collectSensors()},false);
+$('#btnSaveSensorsRestart').onclick=()=>saveConfig({sensors:collectSensors()},true);
+$('#btnSaveSampling').onclick=()=>saveConfig({sampling:{interval_seconds:+$('#s_interval').value,average_samples:+$('#s_avg').value}},true);
+$('#btnZero').onclick=async e=>{
+  if(!confirm('Ensure sensors are in clean air. Run zero calibration now?'))return;
+  e.target.disabled=true;e.target.textContent='Calibrating…';
+  try{const r=await api('/api/calibrate/zero',{method:'POST'});toast(r.ok?'Zero calibration done':'Calibration finished with warnings');loadConfig();}
+  catch(err){toast('Failed: '+err.message);}finally{e.target.disabled=false;e.target.textContent='Run zero calibration';}
+};
+$$('[data-svc]').forEach(b=>b.onclick=async()=>{
+  try{const r=await api('/api/service/'+b.dataset.svc,{method:'POST'});toast('Service '+r.state);refreshStatus();}
+  catch(e){toast('Failed: '+e.message);}
+});
+$('#btnLogs').onclick=async()=>{try{const r=await api('/api/logs?lines=250');$('#logbox').textContent=r.log||'(empty)';}catch(e){$('#logbox').textContent=e.message;}};
+
+// ---- live websocket ----
+function startLive(){
+  const proto=location.protocol==='https:'?'wss':'ws';
+  const ws=new WebSocket(`${proto}://${location.host}/ws/live`);
+  ws.onmessage=ev=>{
+    const {latest,live,i2c}=JSON.parse(ev.data);
+    renderPMWeather(live||{});
+    if(i2c){const want=['0x48','0x49'];
+      $('#i2cbadges').innerHTML=want.map(a=>badge(a,(i2c.addresses||[]).includes(a)?'ok':'bad')).join('')
+        + ((i2c.addresses||[]).filter(a=>!want.includes(a)).map(a=>badge(a,'')).join(''));}
+    // Prefer the reader's local status file; fall back to the broker feed.
+    const gas = latest || (live && live.gas && live.gas.data) || null;
+    if(!gas){$('#livebody').innerHTML='<tr><td colspan="5">No data — is the reader running?</td></tr>';return;}
+    const rows=['CO','SO2','NO2','O3','OX'].filter(k=>gas[k]).map(k=>{
+      const e=gas[k];const valKey=Object.keys(e).find(x=>x.includes('_ppm')||x.includes('_ppb'));
+      const lvl=e.level?badge(e.level,e.level==='GOOD'?'ok':e.level==='MODERATE'?'warn':'bad'):'—';
+      // O3 is derived (OX − NO2) so it has no electrode voltages.
+      const derived = e.OP1_V==null && e.OP2_V==null;
+      const volts = derived
+        ? `<td colspan="2" style="color:var(--gray-400,#98a2b3);font-style:italic">derived (OX − NO₂)</td>`
+        : `<td class="mono">${e.OP1_V??'—'}</td><td class="mono">${e.OP2_V??'—'}</td>`;
+      return `<tr><td>${k}</td><td class="mono">${valKey?e[valKey]+' '+valKey.split('_')[1]:(e.error||'—')}</td>
+        ${volts}<td>${lvl}</td></tr>`;});
+    $('#livebody').innerHTML=rows.join('')||'<tr><td colspan="5">No sensors reporting</td></tr>';
+  };
+  ws.onclose=()=>setTimeout(startLive,3000);
+}
+
+// ---- particulate & weather (from Node-RED, via local broker) ----
+function renderPMWeather(live){
+  const el=$('#pmweather'); if(!el)return;
+  const pick=(o,keys)=>{for(const k of keys)if(o&&o[k]!=null)return o[k];return null;};
+  const rows=[];
+  const pm=live.particulate&&live.particulate.data;
+  if(pm){
+    rows.push(['PM2.5', pick(pm,['PM2.5','pm25']), 'µg/m³']);
+    rows.push(['PM10', pick(pm,['PM10','pm10']), 'µg/m³']);
+    rows.push(['TSP', pick(pm,['TSP','tsp']), 'µg/m³']);
+  }
+  const w=live.weather&&live.weather.data;
+  if(w){
+    rows.push(['Temperature', pick(w,['Temperature','temperature','temp']), '°C']);
+    rows.push(['Humidity', pick(w,['Humidity','humidity']), '%']);
+    rows.push(['Pressure', pick(w,['Pressure','pressure']), 'hPa']);
+  }
+  if(!rows.length){
+    el.innerHTML='<table><tbody><tr><td>No data — is Node-RED running?</td></tr></tbody></table>';
+    return;
+  }
+  el.innerHTML='<table><thead><tr><th>Parameter</th><th>Value</th></tr></thead><tbody>'+
+    rows.map(([p,v,u])=>`<tr><td>${p}</td><td class="mono">${v!=null?v+' '+u:'—'}</td></tr>`).join('')+
+    '</tbody></table>';
+}
+
+// ---- broker (Node-RED) ----
+async function loadNodeRed(){
+  try{
+    const s=await api('/api/nodered/status');
+    const st=s.service.state, c=st==='active'?'ok':(st==='failed'?'bad':'warn');
+    $('#nrState').outerHTML=`<span class="badge ${c}" id="nrState"><i></i>${st}</span>`;
+    const bc=s.broker_connected;
+    $('#nrBroker').outerHTML=`<span class="badge ${bc?'ok':'warn'}" id="nrBroker"><i></i>${bc?'broker connected':'broker offline'}</span>`;
+  }catch(e){}
+  try{ renderBroker(await api('/api/nodered/broker')); }
+  catch(e){ $('#brokerForm').innerHTML='<p class="hint">'+e.message+'</p>'; }
+}
+function renderBroker(b){
+  if(!b.found){$('#brokerForm').innerHTML='<p class="hint">'+(b.detail||'No MQTT broker node found.')+'</p>';return;}
+  const p=b.props||{};
+  let html=`<p class="hint" style="margin-bottom:12px">Editing <b>${b.name}</b> <span style="color:var(--muted)">(${b.type})</span></p><div class="row">`;
+  html+=Object.entries(p).map(([k,v])=>
+    typeof v==='boolean'
+      ? `<div class="field switch"><input type="checkbox" data-bk="${k}" ${v?'checked':''} style="width:auto"> <label style="margin:0">${k}</label></div>`
+      : `<div class="field"><label>${k}</label><input data-bk="${k}" data-t="${typeof v}" value="${v==null?'':v}"></div>`
+  ).join('');
+  if(b.credentials){   // mqtt-broker: user/password are encrypted credentials
+    html+=`<div class="field"><label>username</label><input id="bkUser" placeholder="(unchanged)"></div>
+           <div class="field"><label>password</label><input id="bkPass" type="password" placeholder="(unchanged)"></div>`;
+  }
+  $('#brokerForm').innerHTML=html+'</div>';
+}
+function collectBroker(){
+  const props={};
+  $$('#brokerForm [data-bk]').forEach(i=>{
+    props[i.dataset.bk]= i.type==='checkbox' ? i.checked
+      : (i.dataset.t==='number' ? Number(i.value) : i.value);
+  });
+  return props;
+}
+$('#btnSaveBroker').onclick=async()=>{
+  const body={props:collectBroker()};
+  const u=$('#bkUser'), pw=$('#bkPass');
+  if(u&&u.value)body.username=u.value;
+  if(pw&&pw.value)body.password=pw.value;
+  try{await api('/api/nodered/broker',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    toast('Broker updated & deployed');}catch(e){toast('Failed: '+e.message);}
+};
+$('#btnPointLogger').onclick=async()=>{
+  if(!confirm('Point the gas reader at the local broker (127.0.0.1) and restart it?'))return;
+  try{const r=await api('/api/nodered/point-logger',{method:'POST'});toast('Gas reader → 127.0.0.1:'+r.port);loadConfig();refreshStatus();}
+  catch(e){toast('Failed: '+e.message);}
+};
+$$('[data-nrsvc]').forEach(b=>b.onclick=async()=>{
+  try{const r=await api('/api/nodered/service/'+b.dataset.nrsvc,{method:'POST'});toast('Node-RED '+r.state);loadNodeRed();}
+  catch(e){toast('Failed: '+e.message);}
+});
+
+// ---- portal live data source ----
+function setLbStatus(cls,txt){$('#lb_status').outerHTML='<span class="badge '+cls+'" id="lb_status"><i></i>'+txt+'</span>';}
+async function loadLiveBroker(){
+  try{
+    const r=await api('/api/live-broker'); const o=r.override, e=r.effective;
+    $('#lb_host').value=o.host||''; $('#lb_port').value=o.port||8883;
+    $('#lb_user').value=o.username||''; $('#lb_prefix').value=o.topic_prefix||'';
+    $('#lb_tls').checked=!!o.tls;
+    $('#lb_host').placeholder = e.source==='reader' ? '(same as gas reader: '+(e.host||'—')+')' : '';
+    setLbStatus(r.connected?'ok':'warn', r.connected?'connected':'not connected');
+  }catch(err){}
+}
+$('#lb_same').onclick=()=>{$('#lb_host').value='';$('#lb_prefix').value='';toast('Will use the gas reader broker — Save to apply');};
+$('#lb_test').onclick=async()=>{
+  setLbStatus('warn','testing…');
+  try{const res=await api('/api/mqtt/test',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({broker:$('#lb_host').value||undefined,port:+$('#lb_port').value,tls:$('#lb_tls').checked,username:$('#lb_user').value,password:$('#lb_pass').value})});
+    setLbStatus(res.ok?'ok':'bad',res.detail);
+  }catch(e){setLbStatus('bad',e.message);}
+};
+$('#lb_save').onclick=async()=>{
+  const b={host:$('#lb_host').value,port:+$('#lb_port').value,tls:$('#lb_tls').checked,username:$('#lb_user').value,topic_prefix:$('#lb_prefix').value};
+  if($('#lb_pass').value)b.password=$('#lb_pass').value;
+  setLbStatus('warn','reconnecting…');
+  try{const r=await api('/api/live-broker',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
+    setLbStatus(r.connected?'ok':'warn', r.connected?'connected':'connecting…');toast('Saved & reconnected');}
+  catch(e){setLbStatus('bad',e.message);toast('Failed: '+e.message);}
+};
+
+// ---- boot ----
+refreshStatus();loadConfig();startLive();
+setInterval(refreshStatus,5000);
+</script>
+</body>
+</html>

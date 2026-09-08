@@ -1,0 +1,68 @@
+# ====================================================================
+#  Bayu Logger — single source of truth for the device.
+#  BOTH the sensor reader and the local settings portal read/write this
+#  file. The portal edits it, then restarts the reader service to apply.
+# ====================================================================
+
+device:
+  id: "d6fb0a5d-2311-44fd-9657-2f9003e52602"
+  name: "Bayu Logger 01"
+  location:
+    lat: 3.0738
+    lon: 101.5183
+  timezone: "Asia/Kuala_Lumpur"
+
+mqtt:
+  broker: "02376c7baed24520a4341dc75f965cb2.s1.eu.hivemq.cloud"
+  port: 8883
+  tls: true
+  username: "ArifOthman"
+  password: "Arif12345"
+  topic_prefix: "v1/device/demo"     # topics: <prefix>/gasTelemetry, /particulateTelemetry, /weatherStation
+  client_id: "gas-monitor-pi4"
+  qos: 2
+  retain: true
+  keepalive: 60
+
+sampling:
+  interval_seconds: 20
+  average_samples: 16
+
+# Per-sensor calibration. sensitivity is signed WE mV/ppm (Alphasense ISB
+# manual); *_zero_v are field-calibrated zeros (raw ADC volts) from zero_cal.py.
+# thresholds are the [GOOD, MODERATE] upper bounds; above MODERATE = UNHEALTHY.
+sensors:
+  co:  { name: "CO-B4",    unit: "ppm", sensitivity: 336.0,  we_zero_v: 0.3262, ae_zero_v: 0.2776, thresholds: [9, 35] }
+  ox:  { name: "OX-B431",  unit: "ppb", sensitivity: -216.0, we_zero_v: 0.2032, ae_zero_v: 0.2162, thresholds: [] }
+  no2: { name: "NO2-B43F", unit: "ppb", sensitivity: -165.0, we_zero_v: 0.1924, ae_zero_v: 0.2110, thresholds: [53, 100] }
+  so2: { name: "SO2-B4",   unit: "ppb", sensitivity: 240.0,  we_zero_v: 0.3666, ae_zero_v: 0.3419, thresholds: [35, 75] }
+
+service:
+  name: "gas-monitor.service"        # systemd unit that runs the reader
+
+# Node-RED on the same Pi (hosts the Aedes MQTT broker + the particulate and
+# weather collection flows). Gas comes from the Python reader service above.
+nodered:
+  service: "nodered.service"
+  admin_url: "http://127.0.0.1:1880"
+  admin_token: ""                    # only if Node-RED adminAuth is enabled
+
+# Where the PORTAL subscribes to show live readings (gas + particulate + weather).
+# Leave host blank to reuse the gas reader's broker above (HiveMQ). Set these to
+# point the portal at any broker — the user can also edit them in the UI.
+live_broker:
+  host: ""                 # blank = same broker as the gas reader (mqtt above)
+  port: 8883
+  tls: true
+  username: ""
+  password: ""
+  topic_prefix: ""         # blank = use mqtt.topic_prefix
+
+# Where the reader writes its most recent report; the portal streams this
+# to the browser over WebSocket for the Live view (works fully offline).
+status_file: "/run/bayu/latest.json"
+
+# Portal admin login (change this!). Empty password disables auth (dev only).
+portal:
+  username: "admin"
+  password: "bayu-admin"

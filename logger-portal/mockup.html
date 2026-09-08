@@ -1,0 +1,482 @@
+<style>
+  :root{
+    --ground:#f5f7fb; --panel:#ffffff; --panel2:#fafbfe;
+    --ink:#16203a; --muted:#64708c; --line:#e5e9f3; --line2:#eef1f8;
+    --accent:#3355ff; --accent-soft:#e9edff;
+    --ok:#12a150; --warn:#d68a00; --bad:#e5484d;
+    --ok-s:rgba(18,161,80,.12); --warn-s:rgba(214,138,0,.14); --bad-s:rgba(229,72,77,.13);
+    --shadow:0 1px 2px rgba(20,32,60,.05),0 8px 24px -16px rgba(20,32,60,.25);
+    --mono:ui-monospace,"SF Mono",Menlo,"Cascadia Mono",Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --ground:#0b0f1c; --panel:#141a2c; --panel2:#111726;
+      --ink:#e9edf8; --muted:#8994b2; --line:#232c46; --line2:#1c2438;
+      --accent:#6a83ff; --accent-soft:#1a2340;
+      --ok-s:rgba(30,190,110,.15); --warn-s:rgba(230,160,40,.16); --bad-s:rgba(240,90,95,.16);
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -18px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="light"]{
+    --ground:#f5f7fb; --panel:#ffffff; --panel2:#fafbfe; --ink:#16203a; --muted:#64708c;
+    --line:#e5e9f3; --line2:#eef1f8; --accent:#3355ff; --accent-soft:#e9edff;
+    --ok-s:rgba(18,161,80,.12); --warn-s:rgba(214,138,0,.14); --bad-s:rgba(229,72,77,.13);
+    --shadow:0 1px 2px rgba(20,32,60,.05),0 8px 24px -16px rgba(20,32,60,.25);
+  }
+  :root[data-theme="dark"]{
+    --ground:#0b0f1c; --panel:#141a2c; --panel2:#111726; --ink:#e9edf8; --muted:#8994b2;
+    --line:#232c46; --line2:#1c2438; --accent:#6a83ff; --accent-soft:#1a2340;
+    --ok-s:rgba(30,190,110,.15); --warn-s:rgba(230,160,40,.16); --bad-s:rgba(240,90,95,.16);
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -18px rgba(0,0,0,.7);
+  }
+  *{box-sizing:border-box}
+  .wrap{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--ground);color:var(--ink);
+    min-height:100vh;-webkit-font-smoothing:antialiased}
+  .wrap{display:flex}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .eyebrow{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:700}
+
+  /* ---- sidebar ---- */
+  .rail{width:236px;flex:none;background:var(--panel);border-right:1px solid var(--line);
+    display:flex;flex-direction:column;padding:20px 14px;min-height:100vh;position:sticky;top:0}
+  .brand{display:flex;align-items:center;gap:11px;padding:6px 8px 20px}
+  .mark{width:30px;height:30px;border-radius:9px;background:conic-gradient(from 210deg,#3355ff,#22d3ee,#3355ff);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+  .brand b{font-size:15.5px;letter-spacing:-.01em}
+  .brand small{display:block;color:var(--muted);font-size:11px;font-weight:500;letter-spacing:.02em}
+  .nav{display:flex;flex-direction:column;gap:2px;margin-top:4px}
+  .nav a{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:9px;color:var(--muted);
+    font-weight:600;font-size:13.5px;cursor:pointer;text-decoration:none;transition:background .12s,color .12s}
+  .nav a svg{width:17px;height:17px;flex:none}
+  .nav a:hover{background:var(--panel2);color:var(--ink)}
+  .nav a.on{background:var(--accent);color:#fff;box-shadow:var(--shadow)}
+  .nav a.on svg{opacity:1}
+  .railfoot{margin-top:auto;border-top:1px solid var(--line2);padding:12px 8px 2px;font-size:11.5px;color:var(--muted);line-height:1.7}
+  .railfoot .mono{color:var(--ink)}
+
+  /* ---- main ---- */
+  .main{flex:1;min-width:0}
+  .top{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--panel) 88%,transparent);
+    backdrop-filter:blur(8px);border-bottom:1px solid var(--line);
+    display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 26px}
+  .top h1{margin:0;font-size:17px;letter-spacing:-.01em}
+  .top .loc{color:var(--muted);font-size:12px;margin-top:1px}
+  .top .loc .mono{color:var(--ink)}
+  .strip{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .themebtn{all:unset;cursor:pointer;padding:7px 9px;border-radius:8px;border:1px solid var(--line);
+    color:var(--muted);font-size:12px;line-height:1}
+  .themebtn:hover{color:var(--ink)}
+
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;
+    font-size:12px;font-weight:600;background:var(--panel2);color:var(--muted);border:1px solid var(--line2)}
+  .chip i{width:7px;height:7px;border-radius:50%;background:currentColor}
+  .chip.ok{background:var(--ok-s);color:var(--ok);border-color:transparent}
+  .chip.warn{background:var(--warn-s);color:var(--warn);border-color:transparent}
+  .chip.bad{background:var(--bad-s);color:var(--bad);border-color:transparent}
+  .chip.live i{animation:pulse 1.8s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  @media (prefers-reduced-motion:reduce){.chip.live i{animation:none}}
+
+  .content{padding:26px;max-width:1060px}
+  .view{display:none;animation:fade .25s ease}
+  .view.on{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.view{animation:none}}
+
+  .grid{display:grid;gap:15px;grid-template-columns:repeat(auto-fill,minmax(196px,1fr))}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:16px 17px;box-shadow:var(--shadow)}
+  .card .eyebrow{margin-bottom:9px}
+  .card .val{font-size:25px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+  .card .val small{font-size:13px;color:var(--muted);font-weight:600}
+  .card .sub{margin-top:5px;font-size:12px;color:var(--muted)}
+  .card.feature{grid-column:span 2}
+
+  .section{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);margin-bottom:18px}
+  .section > header{padding:18px 20px 4px}
+  .section > header h2{margin:0;font-size:15px;letter-spacing:-.01em}
+  .section > header p{margin:5px 0 0;color:var(--muted);font-size:12.5px;max-width:62ch}
+  .section .body{padding:16px 20px 20px}
+
+  table{width:100%;border-collapse:collapse}
+  thead th{text-align:right;padding:9px 14px;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;
+    color:var(--muted);font-weight:700;border-bottom:1px solid var(--line)}
+  thead th:first-child,tbody td:first-child{text-align:left}
+  tbody td{padding:11px 14px;text-align:right;border-bottom:1px solid var(--line2);font-size:13px}
+  tbody tr:last-child td{border-bottom:0}
+  td.name{font-weight:600}
+  td.name small{color:var(--muted);font-weight:500;margin-left:6px}
+  .tag{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:.02em}
+  .tag.ok{background:var(--ok-s);color:var(--ok)} .tag.warn{background:var(--warn-s);color:var(--warn)} .tag.bad{background:var(--bad-s);color:var(--bad)}
+
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .field{margin-bottom:13px}
+  .field label{display:block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .field input,.field select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;
+    background:var(--panel2);color:var(--ink);font:inherit;font-size:13px}
+  .field input:focus,.field select:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+  .field.mono input{font-family:var(--mono)}
+  .toggle{display:flex;align-items:center;gap:10px;padding:9px 0}
+  .toggle label{margin:0;text-transform:none;letter-spacing:0;font-size:13px;color:var(--ink)}
+  .sw{width:38px;height:22px;border-radius:999px;background:var(--accent);position:relative;flex:none}
+  .sw.off{background:var(--line)}
+  .sw::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+  .sw.off::after{left:auto;right:2px}
+
+  .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:6px}
+  .btn{all:unset;cursor:pointer;padding:9px 15px;border-radius:9px;font-weight:600;font-size:13px;
+    background:var(--accent);color:#fff;text-align:center;box-shadow:var(--shadow)}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);box-shadow:none}
+  .btn.danger{background:transparent;color:var(--bad);border:1px solid var(--bad-s)}
+  .btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  .sensor{border:1px solid var(--line2);border-radius:12px;padding:14px;margin-bottom:12px;background:var(--panel2)}
+  .sensor h4{margin:0 0 11px;font-size:13.5px}
+  .sensor h4 small{color:var(--muted);font-weight:500;margin-left:6px}
+
+  pre.log{margin:0;background:#0a0e1a;color:#c5d2f2;border-radius:11px;padding:14px 15px;font-family:var(--mono);
+    font-size:12px;line-height:1.65;overflow:auto;max-height:280px;border:1px solid var(--line2)}
+  pre.log .g{color:#5fd39a} pre.log .d{color:#6b7ba6}
+
+  .wizard{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .step{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:12.5px;font-weight:600}
+  .step b{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11px;
+    background:var(--accent-soft);color:var(--accent)}
+  .step.done b{background:var(--ok-s);color:var(--ok)}
+  .arrow{color:var(--line);font-size:14px}
+
+  @media (max-width:820px){
+    .rail{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);z-index:30}
+    .row{grid-template-columns:1fr} .card.feature{grid-column:span 1}
+  }
+</style>
+
+<div class="wrap" id="wrap">
+  <aside class="rail">
+    <div class="brand">
+      <div class="mark"></div>
+      <div><b>Bayu Logger</b><small>Settings portal</small></div>
+    </div>
+    <nav class="nav" id="nav">
+      <a class="on" data-v="overview">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Overview</a>
+      <a data-v="live">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14l4-5 4 4 4-7 6 9"/></svg>Live &amp; Diagnostics</a>
+      <a data-v="calib">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Calibration</a>
+      <a data-v="mqtt">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12a7 7 0 0 1 7-7M8.5 12A3.5 3.5 0 0 1 12 8.5"/><circle cx="12" cy="12" r="1.4"/><path d="M19 12a7 7 0 0 1-7 7M15.5 12A3.5 3.5 0 0 1 12 15.5"/></svg>Connectivity</a>
+      <a data-v="broker">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/><path d="M7 7h.01M7 17h.01"/></svg>Broker (Node-RED)</a>
+      <a data-v="system">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.3l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2.2-1.3L14 2h-4l-.3 2.4a7 7 0 0 0-2.2 1.3l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12a7 7 0 0 0 .1 1.3l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2.2 1.3L10 22h4l.3-2.4a7 7 0 0 0 2.2-1.3l2.4 1 2-3.4-2-1.6c.1-.4.1-.9.1-1.3Z"/></svg>System</a>
+    </nav>
+    <div class="railfoot">
+      Device <span class="mono">d6fb0a5d</span><br>
+      Firmware <span class="mono">reader 1.0.0</span><br>
+      <span class="mono">Asia/Kuala_Lumpur</span>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="top">
+      <div>
+        <h1>Bayu Logger 01</h1>
+        <div class="loc">Seri Kembangan · <span class="mono">3.0738, 101.5183</span></div>
+      </div>
+      <div class="strip">
+        <span class="chip ok live"><i></i>Reader active</span>
+        <span class="chip ok"><i></i>Publishing · 4s ago</span>
+        <span class="chip ok"><i></i>I²C 2/2</span>
+        <button class="themebtn" id="themebtn" title="Toggle theme">◐ Theme</button>
+      </div>
+    </header>
+
+    <div class="content">
+      <!-- OVERVIEW -->
+      <section class="view on" id="v-overview">
+        <div class="grid">
+          <div class="card">
+            <div class="eyebrow">Reader service</div>
+            <div class="val" style="color:var(--ok)">Active</div>
+            <div class="sub">gas-monitor.service · enabled</div>
+          </div>
+          <div class="card">
+            <div class="eyebrow">Uptime</div>
+            <div class="val mono">6d 14h</div>
+            <div class="sub">since last reboot</div>
+          </div>
+          <div class="card">
+            <div class="eyebrow">CPU temperature</div>
+            <div class="val mono">52.4<small> °C</small></div>
+            <div class="sub">nominal</div>
+          </div>
+          <div class="card">
+            <div class="eyebrow">Storage free</div>
+            <div class="val mono">21.8<small> / 29 GB</small></div>
+            <div class="sub">75% available</div>
+          </div>
+          <div class="card feature">
+            <div class="eyebrow">PM2.5 · last hour</div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:10px">
+              <div>
+                <div class="val mono">18.4<small> µg/m³</small></div>
+                <div class="sub"><span class="tag ok">GOOD</span></div>
+              </div>
+              <canvas id="spark" width="260" height="64" style="max-width:60%"></canvas>
+            </div>
+          </div>
+          <div class="card">
+            <div class="eyebrow">I²C devices</div>
+            <div class="val mono" style="font-size:19px">0x48 · 0x49</div>
+            <div class="sub">ADS1015 + ADS1115 detected</div>
+          </div>
+        </div>
+
+        <div class="section" style="margin-top:18px">
+          <header><h2>Current readings</h2><p>Latest values published to the broker. Full raw detail on the Live tab.</p></header>
+          <div class="body" style="padding-top:4px">
+            <table>
+              <thead><tr><th>Parameter</th><th>Value</th><th>Unit</th><th>Status</th></tr></thead>
+              <tbody class="mono">
+                <tr><td class="name">CO <small>Carbon monoxide</small></td><td>0.82</td><td>ppm</td><td><span class="tag ok">GOOD</span></td></tr>
+                <tr><td class="name">SO₂ <small>Sulphur dioxide</small></td><td>9.4</td><td>ppb</td><td><span class="tag ok">GOOD</span></td></tr>
+                <tr><td class="name">NO₂ <small>Nitrogen dioxide</small></td><td>31.6</td><td>ppb</td><td><span class="tag ok">GOOD</span></td></tr>
+                <tr><td class="name">O₃ <small>derived OX−NO₂</small></td><td>58.2</td><td>ppb</td><td><span class="tag warn">MODERATE</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- LIVE -->
+      <section class="view" id="v-live">
+        <div class="section">
+          <header><h2>Gas — live readings</h2><p>From the Python gas reader. The raw working/auxiliary electrode voltages (OP1/OP2) are the fastest way to spot a failing cell.</p></header>
+          <div class="body" style="padding-top:4px">
+            <table>
+              <thead><tr><th>Sensor</th><th>Value</th><th>OP1_V</th><th>OP2_V</th><th>Level</th></tr></thead>
+              <tbody class="mono">
+                <tr><td class="name">CO <small>CO-B4</small></td><td>0.82 ppm</td><td>0.7169</td><td>0.6360</td><td><span class="tag ok">GOOD</span></td></tr>
+                <tr><td class="name">SO₂ <small>SO2-B4</small></td><td>9.4 ppb</td><td>0.6893</td><td>0.6461</td><td><span class="tag ok">GOOD</span></td></tr>
+                <tr><td class="name">NO₂ <small>NO2-B43F</small></td><td>31.6 ppb</td><td>0.3859</td><td>0.4196</td><td><span class="tag ok">GOOD</span></td></tr>
+                <tr><td class="name">OX <small>OX-B431</small></td><td>0.0898 ppm</td><td>0.4118</td><td>0.4333</td><td><span style="color:var(--muted)">—</span></td></tr>
+                <tr><td class="name">O₃ <small>derived</small></td><td>58.2 ppb</td><td class="d">—</td><td class="d">—</td><td><span class="tag warn">MODERATE</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="section">
+          <header><h2>Particulate &amp; weather</h2><p>Collected by the <b>Node-RED</b> flows and read from the local broker — shown here alongside gas so one screen covers all sensors.</p></header>
+          <div class="body">
+            <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(148px,1fr))">
+              <div class="card"><div class="eyebrow">PM2.5</div><div class="val mono" style="font-size:20px">18.4<small> µg/m³</small></div></div>
+              <div class="card"><div class="eyebrow">PM10</div><div class="val mono" style="font-size:20px">27.1<small> µg/m³</small></div></div>
+              <div class="card"><div class="eyebrow">TSP</div><div class="val mono" style="font-size:20px">39.0<small> µg/m³</small></div></div>
+              <div class="card"><div class="eyebrow">Temperature</div><div class="val mono" style="font-size:20px">29.4<small> °C</small></div></div>
+              <div class="card"><div class="eyebrow">Humidity</div><div class="val mono" style="font-size:20px">74<small> %</small></div></div>
+              <div class="card"><div class="eyebrow">Pressure</div><div class="val mono" style="font-size:20px">1008<small> hPa</small></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="section">
+          <header><h2>I²C bus</h2><p>Expected: <span class="mono">0x48</span> (ADS1015) and <span class="mono">0x49</span> (ADS1115).</p></header>
+          <div class="body"><div class="strip">
+            <span class="chip ok"><i></i>0x48 · ADS1015</span>
+            <span class="chip ok"><i></i>0x49 · ADS1115</span>
+            <span class="chip"><i></i>bus 1 · 50 kHz</span>
+          </div></div>
+        </div>
+      </section>
+
+      <!-- CALIBRATION -->
+      <section class="view" id="v-calib">
+        <div class="section">
+          <header><h2>Zero calibration</h2><p>Expose all sensors to clean air, then run. The reader is paused to free the I²C bus, <span class="mono">zero_cal.py</span> captures new baselines, and the reader restarts automatically.</p></header>
+          <div class="body">
+            <div class="wizard" style="margin-bottom:16px">
+              <span class="step done"><b>✓</b>Clean air</span><span class="arrow">→</span>
+              <span class="step"><b>2</b>Capture baseline</span><span class="arrow">→</span>
+              <span class="step"><b>3</b>Write &amp; restart</span>
+            </div>
+            <div class="actions"><button class="btn">Run zero calibration</button>
+              <span style="color:var(--muted);font-size:12.5px">Last run: 2026-07-02 09:14</span></div>
+          </div>
+        </div>
+        <div class="section">
+          <header><h2>Sensor parameters</h2><p>Signed sensitivity (mV/ppm) from the Alphasense datasheet and field-calibrated zeros. Thresholds are the [GOOD, MODERATE] upper bounds.</p></header>
+          <div class="body">
+            <div class="sensor">
+              <h4>CO-B4 <small>CO · ppm</small></h4>
+              <div class="row"><div class="field mono"><label>Sensitivity mV/ppm</label><input value="336.0"></div><div class="field mono"><label>Thresholds</label><input value="9, 35"></div></div>
+              <div class="row"><div class="field mono"><label>WE zero (V)</label><input value="0.3262"></div><div class="field mono"><label>AE zero (V)</label><input value="0.2776"></div></div>
+            </div>
+            <div class="sensor">
+              <h4>NO2-B43F <small>NO₂ · ppb</small></h4>
+              <div class="row"><div class="field mono"><label>Sensitivity mV/ppm</label><input value="-165.0"></div><div class="field mono"><label>Thresholds</label><input value="53, 100"></div></div>
+              <div class="row"><div class="field mono"><label>WE zero (V)</label><input value="0.1924"></div><div class="field mono"><label>AE zero (V)</label><input value="0.2110"></div></div>
+            </div>
+            <div class="actions"><button class="btn">Save</button><button class="btn ghost">Save &amp; restart reader</button></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MQTT -->
+      <section class="view" id="v-mqtt">
+        <div class="section">
+          <header><h2>MQTT broker</h2><p>Where telemetry is published. Always test before saving — a bad host or credential silently stops data.</p></header>
+          <div class="body">
+            <div class="row">
+              <div class="field mono"><label>Broker host</label><input value="02376c7b…s1.eu.hivemq.cloud"></div>
+              <div class="field mono"><label>Port</label><input value="8883"></div>
+            </div>
+            <div class="row">
+              <div class="field"><label>Username</label><input value="ArifOthman"></div>
+              <div class="field"><label>Password</label><input type="password" value="········"></div>
+            </div>
+            <div class="row">
+              <div class="field mono"><label>Topic prefix</label><input value="v1/device/demo"></div>
+              <div class="field"><label>QoS</label><select><option>0</option><option>1</option><option selected>2</option></select></div>
+            </div>
+            <div class="toggle"><span class="sw"></span><label>Use TLS (port 8883)</label></div>
+            <div class="toggle"><span class="sw"></span><label>Retain last message</label></div>
+            <div class="actions" style="margin-top:12px">
+              <button class="btn ghost">Test connection</button>
+              <button class="btn">Save &amp; restart reader</button>
+              <span class="chip ok"><i></i>Connected · 41 ms</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- BROKER -->
+      <section class="view" id="v-broker">
+        <div class="section">
+          <header><h2>Node-RED service</h2><p>Hosts the broker connection and the particulate &amp; weather flows. Restarting it restarts that collection.</p></header>
+          <div class="body">
+            <div class="strip" style="margin-bottom:15px">
+              <span class="chip ok"><i></i>active</span>
+              <span class="chip ok"><i></i>broker connected</span>
+              <span class="chip"><i></i>admin 127.0.0.1:1880</span>
+            </div>
+            <div class="actions"><button class="btn">Start</button><button class="btn ghost">Restart</button><button class="btn danger">Stop</button></div>
+          </div>
+        </div>
+        <div class="section">
+          <header><h2>Broker connection</h2><p>Read live from the flow — the <span class="mono">mqtt-broker</span> config your <span class="mono">mqtt out</span> nodes share. Saving deploys to Node-RED immediately; no restart.</p></header>
+          <div class="body">
+            <p class="eyebrow" style="margin-bottom:13px">Editing “HiveMQ” · mqtt-broker</p>
+            <div class="row">
+              <div class="field mono"><label>Broker</label><input value="02376c7b…s1.eu.hivemq.cloud"></div>
+              <div class="field mono"><label>Port</label><input value="8883"></div>
+            </div>
+            <div class="row">
+              <div class="field mono"><label>Client ID</label><input value="nodered-bayu"></div>
+              <div class="field mono"><label>Keepalive (s)</label><input value="60"></div>
+            </div>
+            <div class="row">
+              <div class="field"><label>Username</label><input placeholder="(unchanged)"></div>
+              <div class="field"><label>Password</label><input type="password" placeholder="(unchanged)"></div>
+            </div>
+            <div class="toggle"><span class="sw"></span><label>Use TLS</label></div>
+            <div class="actions" style="margin-top:12px"><button class="btn">Save &amp; deploy</button></div>
+          </div>
+        </div>
+        <div class="section">
+          <header><h2>Portal live data source</h2><p>Where <b>this portal</b> subscribes to show live readings. It's HiveMQ — TLS on with credentials. Leave host blank to reuse the gas reader's broker.</p></header>
+          <div class="body">
+            <div class="row">
+              <div class="field mono"><label>Broker host</label><input value="02376c7b…s1.eu.hivemq.cloud"></div>
+              <div class="field mono"><label>Port</label><input value="8883"></div>
+            </div>
+            <div class="row">
+              <div class="field"><label>Username</label><input value="ArifOthman"></div>
+              <div class="field"><label>Password</label><input type="password" value="········"></div>
+            </div>
+            <div class="row">
+              <div class="field mono"><label>Topic prefix</label><input value="v1/device/demo"></div>
+              <div class="field"><label>Security</label><div class="toggle" style="padding:6px 0"><span class="sw"></span><label>Use TLS</label></div></div>
+            </div>
+            <div class="actions" style="margin-top:12px">
+              <button class="btn ghost">Same as gas reader</button>
+              <button class="btn ghost">Test</button>
+              <button class="btn">Save &amp; reconnect</button>
+              <span class="chip ok"><i></i>connected · 41 ms</span>
+            </div>
+          </div>
+        </div>
+        <div class="section">
+          <header><h2>Point gas reader at this broker</h2><p>Set the Python gas reader to publish to the local broker (127.0.0.1, TLS off) and restart it — one click.</p></header>
+          <div class="body"><div class="actions"><button class="btn ghost">Use local broker</button></div></div>
+        </div>
+      </section>
+
+      <!-- SYSTEM -->
+      <section class="view" id="v-system">
+        <div class="section">
+          <header><h2>Reader service</h2><p>Control the logger process. State: <span class="chip ok" style="vertical-align:middle"><i></i>active</span></p></header>
+          <div class="body"><div class="actions">
+            <button class="btn">Start</button><button class="btn ghost">Restart</button><button class="btn danger">Stop</button>
+          </div></div>
+        </div>
+        <div class="section">
+          <header><h2>Sampling</h2><p>How often the reader samples and how many readings it averages per report.</p></header>
+          <div class="body">
+            <div class="row">
+              <div class="field mono"><label>Interval (seconds)</label><input value="20"></div>
+              <div class="field mono"><label>Averaged samples</label><input value="16"></div>
+            </div>
+            <div class="actions"><button class="btn">Save &amp; restart reader</button></div>
+          </div>
+        </div>
+        <div class="section">
+          <header><h2>Logs</h2><p>Recent output from <span class="mono">journalctl -u gas-monitor.service</span>.</p></header>
+          <div class="body">
+<pre class="log"><span class="d">2026-07-13T14:02:11</span> MQTT connected (rc=0)
+<span class="d">2026-07-13T14:02:31</span> CO=0.82ppm SO2=9.4ppb NO2=31.6ppb <span class="g">O3=58.2ppb</span>
+<span class="d">2026-07-13T14:02:51</span> CO=0.79ppm SO2=9.1ppb NO2=30.8ppb <span class="g">O3=57.4ppb</span>
+<span class="d">2026-07-13T14:03:11</span> published gasTelemetry (qos=2, retain=true)
+<span class="d">2026-07-13T14:03:31</span> CO=0.84ppm SO2=9.6ppb NO2=32.1ppb <span class="g">O3=59.0ppb</span></pre>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+  // tab switching
+  const nav = document.getElementById('nav');
+  nav.addEventListener('click', e => {
+    const a = e.target.closest('a'); if(!a) return;
+    e.preventDefault();
+    nav.querySelectorAll('a').forEach(x=>x.classList.remove('on'));
+    a.classList.add('on');
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+    document.getElementById('v-'+a.dataset.v).classList.add('on');
+  });
+  // theme toggle (respects the viewer's theme by default)
+  document.getElementById('themebtn').addEventListener('click', ()=>{
+    const r=document.documentElement;
+    const cur=r.getAttribute('data-theme')|| (matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+    r.setAttribute('data-theme', cur==='dark'?'light':'dark');
+  });
+  // sparkline
+  (function(){
+    const c=document.getElementById('spark'); if(!c) return;
+    const ctx=c.getContext('2d'), w=c.width, h=c.height;
+    const pts=[14,15,13,17,16,19,18,20,17,18.4,19,18,17.5,18.4,19.2,18.4];
+    const min=Math.min(...pts)-1, max=Math.max(...pts)+1;
+    const x=i=>i/(pts.length-1)*w, y=v=>h-4-(v-min)/(max-min)*(h-8);
+    const css=getComputedStyle(document.documentElement);
+    const accent=css.getPropertyValue('--accent').trim()||'#3355ff';
+    ctx.clearRect(0,0,w,h);
+    const g=ctx.createLinearGradient(0,0,0,h);
+    g.addColorStop(0,accent+'55'); g.addColorStop(1,accent+'00');
+    ctx.beginPath(); ctx.moveTo(0,h);
+    pts.forEach((v,i)=>ctx.lineTo(x(i),y(v))); ctx.lineTo(w,h); ctx.closePath();
+    ctx.fillStyle=g; ctx.fill();
+    ctx.beginPath(); pts.forEach((v,i)=>i?ctx.lineTo(x(i),y(v)):ctx.moveTo(x(i),y(v)));
+    ctx.strokeStyle=accent; ctx.lineWidth=2; ctx.lineJoin='round'; ctx.stroke();
+    ctx.beginPath(); ctx.arc(x(pts.length-1),y(pts[pts.length-1]),3.2,0,7); ctx.fillStyle=accent; ctx.fill();
+  })();
+</script>

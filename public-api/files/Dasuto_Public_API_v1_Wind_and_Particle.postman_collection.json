@@ -1,0 +1,139 @@
+{
+  "info": {
+    "name": "Dasuto Public API v1 (Wind & Particle)",
+    "_postman_id": "dasuto-public-api-v1-rls-2025-06-09T16:07:44.942771",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"username\": \"your_username\", \"password\": \"your_passwrod\"}"
+        },
+        "url": {
+          "raw": "http://localhost:5050/auth/login",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5050",
+          "path": [
+            "auth",
+            "login"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Particle Data (RLS)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:5050/api/sensor-data",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5050",
+          "path": [
+            "api",
+            "sensor-data"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Particle Data - Recent N (RLS)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:5050/api/sensor-data/recent/10",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5050",
+          "path": [
+            "api",
+            "sensor-data",
+            "recent",
+            "10"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Wind Data (RLS)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:5050/api/sensor-data/wind",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5050",
+          "path": [
+            "api",
+            "sensor-data",
+            "wind"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Wind Data - Recent N (RLS)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:5050/api/sensor-data/wind/recent/10",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "5050",
+          "path": [
+            "api",
+            "sensor-data",
+            "wind",
+            "recent",
+            "10"
+          ]
+        }
+      }
+    }
+  ]
+}

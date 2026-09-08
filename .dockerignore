@@ -1,0 +1,18 @@
+# Frontend build context ignores
+node_modules
+**/node_modules
+dist
+dist-ssr
+
+# Backend folders (built by their own Dockerfiles)
+server
+public-api
+
+# Misc
+.git
+.gitignore
+*.md
+Dockerfile
+docker-compose.yml
+.dockerignore
+*.local

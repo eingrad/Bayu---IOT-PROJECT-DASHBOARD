@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Environmental Report</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 40px;
+            color: #333;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+
+        h2 {
+            font-size: 18px;
+            margin-top: 32px;
+            margin-bottom: 12px;
+            color: #2a6ebb;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+            font-size: 12px;
+        }
+
+        th,
+        td {
+            padding: 8px 10px;
+            border: 1px solid #ccc;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f4f6f9;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .summary-table td {
+            padding: 6px 12px;
+            border: none;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 60px;
+            font-size: 10px;
+            color: #666;
+        }
+
+        .chart {
+            margin: 24px 0;
+            text-align: center;
+        }
+
+        .chart img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Bayu Sense Environmental Report</h1>
+        <p><strong>Report Type:</strong> Weekly Report</p>
+        <p><strong>Data Type:</strong>
+            <%= dataType %>
+        </p>
+        <p><strong>Date Range:</strong>
+            <%= startDate %> to <%= endDate %>
+        </p>
+        <p><strong>Generated:</strong>
+            <%= generatedAt %>
+        </p>
+    </header>
+    <br>
+    <h2>Summary</h2>
+    <table class="summary-table">
+        <tr>
+            <td>Total Records:</td>
+            <td>
+                <%= stats.total %>
+            </td>
+        </tr>
+        <% if (stats.averageTemperature) { %>
+            <tr>
+                <td>Average Temperature:</td>
+                <td>
+                    <%= stats.averageTemperature %> <%= stats.temperatureUnit || '°C' %>
+                </td>
+            </tr>
+            <% } %>
+                <% if (stats.maxWindSpeed) { %>
+                    <tr>
+                        <td>Max Wind Speed:</td>
+                        <td>
+                            <%= stats.maxWindSpeed %> km/h
+                        </td>
+                    </tr>
+                    <% } %>
+                        <% if (stats.minHumidity) { %>
+                            <tr>
+                                <td>Min Humidity:</td>
+                                <td>
+                                    <%= stats.minHumidity %> %
+                                </td>
+                            </tr>
+                            <% } %>
+    </table>
+
+    <div class="chart">
+        <% if (chartUrl) { %>
+            <img src="<%= chartUrl %>" alt="Data Chart" />
+            <% } %>
+    </div>
+
+    <h2>Detailed Data</h2>
+    <table>
+        <thead>
+            <tr>
+                <% fields.forEach(field=> { %>
+                    <th>
+                        <%= (typeof fieldLabels !== 'undefined' && fieldLabels[field]) ? fieldLabels[field] : field %>
+                    </th>
+                    <% }) %>
+                        <th>measured_at</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% data.forEach(row=> { %>
+                <tr>
+                    <% fields.forEach(field=> { %>
+                        <td>
+                            <%= row[field] %>
+                        </td>
+                        <% }) %>
+                            <td>
+                                <%= row.measured_at %>
+                            </td>
+                </tr>
+                <% }) %>
+        </tbody>
+    </table>
+
+    <div class="footer">
+        &copy; <%= new Date().getFullYear() %> Bayu Sense — Confidential Report
+    </div>
+</body>
+
+</html>
