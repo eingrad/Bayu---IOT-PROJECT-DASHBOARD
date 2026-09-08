@@ -16,14 +16,14 @@ module.exports = async function (req, res, next) {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("🔐 Authorization Header:", req.headers.authorization);
-    console.log("🔐 Token Extracted:", token);
-    console.log("✅ JWT Verified:", decoded);
     req.user = decoded;
 
     const client = await pool.connect();
-    await client.query(`SET app.current_user_id = '${decoded.id}'`);
-    console.log("🔗 DB connection established for user:", decoded.id);
+    // set_config() is the parameterised form of SET — the row-level security
+    // policies read this, so it must not be built by string interpolation.
+    await client.query("SELECT set_config('app.current_user_id', $1, false)", [
+      String(decoded.id),
+    ]);
     req.db = client;
 
     res.on("finish", () => client.release());
