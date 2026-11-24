@@ -27,3 +27,6 @@ dist-ssr
 .env
 .env.*
 !.env.example
+
+# Logger portal: local SQLite history (lives on the Pi, never committed)
+logger-portal/data/
