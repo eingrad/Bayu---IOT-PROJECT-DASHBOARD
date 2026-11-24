@@ -5,7 +5,9 @@ Bayu 4-Gas reader — config-driven refactor of BAYU_SENSE_READER.py.
 Same hardware + math as before, but every setting (MQTT, sample interval,
 per-sensor sensitivity/zeros/thresholds) is loaded from config.yaml, which the
 local settings portal edits. Each cycle it also writes the latest report to
-config.status_file so the portal's Live view works without the cloud.
+config.status_file so the portal's Live view works without the cloud, and
+appends it to the local SQLite history (storage.py) so the portal's History
+tab has every reading even when the network is down.
 
 Run as the systemd unit named in config.service.name (default gas-monitor.service).
 """
@@ -23,6 +25,7 @@ from adafruit_ads1x15.analog_in import AnalogIn
 import paho.mqtt.client as mqtt
 
 from config import load_config
+from storage import open_store
 
 # ---- hardware constants (fixed by the board) -----------------------
 ADS1115_ADDR = 0x49
@@ -137,13 +140,19 @@ def main():
     i2c, adcs = init_adcs()
     channels = build_channels(adcs)
     client = init_mqtt(m)
+    try:
+        store = open_store(cfg)
+    except Exception as e:
+        store = None
+        print(f"local storage unavailable: {e}")
 
     interval = float(sampling.get("interval_seconds", 20))
     avg_samples = int(sampling.get("average_samples", 16))
 
     try:
         while True:
-            report = {"timestamp": time.strftime("%Y-%m-%d %H:%M:%S")}
+            now = time.time()
+            report = {"timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(now))}
             raw_ppm = {}
 
             for key in ("co", "ox", "no2", "so2"):
@@ -181,6 +190,11 @@ def main():
 
             payload = json.dumps(report)
             write_status(status_file, report)
+            if store is not None:
+                try:
+                    store.insert("gas", int(now), report)
+                except Exception as e:
+                    print(f"local storage write failed: {e}")
             try:
                 client.publish(gas_topic, payload,
                                qos=int(m.get("qos", 1)), retain=bool(m.get("retain")))

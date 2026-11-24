@@ -62,6 +62,14 @@ live_broker:
 # to the browser over WebSocket for the Live view (works fully offline).
 status_file: "/run/bayu/latest.json"
 
+# Local history on the Pi's SD card (SQLite). The reader saves every gas report;
+# the portal saves particulate + weather from the live broker. View, chart and
+# download it in the portal's History tab. A relative path is next to this file.
+storage:
+  enabled: true
+  db_path: "data/bayu.db"
+  retention_days: 90       # readings older than this are deleted; 0 = keep forever
+
 # Portal admin login (change this!). Empty password disables auth (dev only).
 portal:
   username: "admin"

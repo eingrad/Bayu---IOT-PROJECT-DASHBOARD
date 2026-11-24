@@ -10,6 +10,9 @@ Design notes
   file and (optionally) restarts the reader service to apply changes.
 * Every hardware/OS call is wrapped so the app still runs on a laptop for
   development — it just reports "unavailable" instead of crashing.
+* Readings are kept in a local SQLite history (storage.py). The reader saves
+  gas; this app saves particulate + weather from its MQTT subscriber, prunes
+  old rows, and serves the History tab (/api/history/*).
 """
 import asyncio
 import json
@@ -17,17 +20,21 @@ import os
 import secrets
 import shutil
 import subprocess
+import threading
 import time
 import urllib.request
 import urllib.error
+from datetime import datetime
 from pathlib import Path
+from typing import List, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, WebSocket, status
-from fastapi.responses import FileResponse
+from fastapi import Depends, FastAPI, HTTPException, Query, WebSocket, status
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 
 from config import deep_merge, load_config, save_config
+from storage import STREAMS, csv_chunks, json_path, open_store, reading_ts, storage_settings
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
@@ -333,9 +340,15 @@ def _start_live_subscriber():
         if not key:
             return
         try:
-            LIVE[key] = {"data": json.loads(msg.payload.decode()), "t": time.time()}
+            data = json.loads(msg.payload.decode())
         except Exception:
-            pass
+            return
+        now = time.time()
+        LIVE[key] = {"data": data, "t": now}
+        # A retained message is an old reading the broker replays on (re)subscribe
+        # — show it live, but don't store it again as a new reading.
+        if not msg.retain and isinstance(data, dict):
+            _record(key, data, now)
 
     client.on_connect = on_connect
     client.on_disconnect = on_disconnect
@@ -349,9 +362,63 @@ def _start_live_subscriber():
         _live_client = None
 
 
+# --------------------------------------------------------------------------
+# Local history (SQLite) — writes from the live subscriber + hourly pruning
+# --------------------------------------------------------------------------
+STORE_STATE = {"error": None}  # last write/prune error, shown on the Overview
+
+
+def _record(stream, data, received):
+    """Save one MQTT reading. Gas is normally saved by the reader itself; the
+    copy arriving over MQTT has the same timestamp and is ignored as a duplicate,
+    so this only fills in gas when the reader isn't writing locally."""
+    try:
+        store = open_store(load_config())
+        if store is not None:
+            store.insert(stream, reading_ts(data, received), data)
+            STORE_STATE["error"] = None
+    except Exception as e:
+        STORE_STATE["error"] = f"write failed: {e}"
+
+
+def _housekeeping():
+    """Create the database on boot, then drop readings past retention hourly."""
+    while True:
+        try:
+            cfg = load_config()
+            store = open_store(cfg)
+            if store is not None:
+                store.prune(storage_settings(cfg)["retention_days"])
+        except Exception as e:
+            STORE_STATE["error"] = f"prune failed: {e}"
+        time.sleep(3600)
+
+
+def storage_status():
+    """Small, cheap summary for /api/status (polled every few seconds)."""
+    cfg = load_config()
+    if not storage_settings(cfg)["enabled"]:
+        return {"enabled": False}
+    try:
+        store = open_store(cfg)
+        now = time.time()
+        return {
+            "enabled": True,
+            "ok": STORE_STATE["error"] is None,
+            "error": STORE_STATE["error"],
+            "size_bytes": store.size_bytes(),
+            "last_saved_age_s": {
+                k: (round(now - v) if v else None) for k, v in store.last_ts().items()
+            },
+        }
+    except Exception as e:
+        return {"enabled": True, "ok": False, "error": str(e)}
+
+
 @app.on_event("startup")
 def _on_startup():
     _start_live_subscriber()
+    threading.Thread(target=_housekeeping, name="bayu-storage", daemon=True).start()
 
 
 # --------------------------------------------------------------------------
@@ -484,6 +551,7 @@ def api_status():
         "power": pi_power(),
         "i2c": i2c_scan(),
         "reader_last_report": latest,  # None if the reader isn't writing yet
+        "storage": storage_status(),
     }
 
 
@@ -727,6 +795,122 @@ def api_zero_cal():
                 )
         save_config(cfg)
     return {"ok": code == 0, "zeros": zeros, "detail": out.strip()[-1000:]}
+
+
+# --------------------------------------------------------------------------
+# History (local SQLite) — what the History tab reads
+# --------------------------------------------------------------------------
+def _history_store():
+    cfg = load_config()
+    store = open_store(cfg)
+    if store is None:
+        raise HTTPException(404, "Local storage is disabled (storage.enabled in config.yaml)")
+    return store, cfg
+
+
+def _history_args(stream: str, start: Optional[int], end: Optional[int]):
+    if stream not in STREAMS:
+        raise HTTPException(400, f"stream must be one of {', '.join(STREAMS)}")
+    end = int(end) if end is not None else int(time.time()) + 1
+    start = int(start) if start is not None else end - 86400
+    if start >= end:
+        raise HTTPException(400, "start must be before end")
+    return start, end
+
+
+def _db_error(e: Exception):
+    return HTTPException(500, f"Local storage error: {e}")
+
+
+@app.get("/api/history/summary", dependencies=[Depends(require_admin)])
+def history_summary():
+    cfg = load_config()
+    s = storage_settings(cfg)
+    if not s["enabled"]:
+        return {"enabled": False}
+    try:
+        summary = open_store(cfg).summary()
+    except Exception as e:
+        raise _db_error(e)
+    return {
+        "enabled": True,
+        "path": str(s["path"]),
+        "retention_days": s["retention_days"],
+        "timezone": (cfg.get("device") or {}).get("timezone"),
+        "error": STORE_STATE["error"],
+        **summary,
+    }
+
+
+@app.get("/api/history/series", dependencies=[Depends(require_admin)])
+def history_series(
+    stream: str,
+    start: Optional[int] = None,
+    end: Optional[int] = None,
+    field: List[str] = Query(default=[]),
+    points: int = 600,
+):
+    """Bucketed mean/min/max per field for the charts."""
+    start, end = _history_args(stream, start, end)
+    fields = list(dict.fromkeys(field))[:12]
+    try:
+        for f in fields:
+            json_path(f)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    store, _ = _history_store()
+    try:
+        out = store.series(stream, start, end, fields, max(10, min(points, 2000)))
+    except Exception as e:
+        raise _db_error(e)
+    return {"stream": stream, "start": start, "end": end, **out}
+
+
+@app.get("/api/history/rows", dependencies=[Depends(require_admin)])
+def history_rows(
+    stream: str,
+    start: Optional[int] = None,
+    end: Optional[int] = None,
+    limit: int = 50,
+    offset: int = 0,
+):
+    """Raw readings, newest first, for the table."""
+    start, end = _history_args(stream, start, end)
+    store, _ = _history_store()
+    try:
+        return store.rows(stream, start, end, max(1, min(limit, 500)), max(0, offset))
+    except Exception as e:
+        raise _db_error(e)
+
+
+@app.get("/api/history/export.csv", dependencies=[Depends(require_admin)])
+def history_export(
+    stream: str,
+    start: Optional[int] = None,
+    end: Optional[int] = None,
+    tz: Optional[str] = None,
+):
+    """Every stored field for the range, oldest first, as a CSV download."""
+    start, end = _history_args(stream, start, end)
+    store, cfg = _history_store()
+    zone = None
+    for name in (tz, (cfg.get("device") or {}).get("timezone")):
+        if not name:
+            continue
+        try:
+            from zoneinfo import ZoneInfo
+
+            zone = ZoneInfo(name)
+            break
+        except Exception:
+            continue
+    stamp = lambda t: datetime.fromtimestamp(t, zone).strftime("%Y%m%d-%H%M")
+    filename = f"bayu-{stream}-{stamp(start)}_to_{stamp(end)}.csv"
+    return StreamingResponse(
+        csv_chunks(store.iter_payloads(stream, start, end), zone),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @app.websocket("/ws/live")
