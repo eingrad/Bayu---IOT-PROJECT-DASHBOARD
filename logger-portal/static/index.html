@@ -1142,6 +1142,7 @@ async function loadCalibration(){
 }
 function renderResume(s){
   const el=$('#cal_resume');
+  if(s&&s.busy){el.innerHTML=`<div class="banner warn">${esc(s.busy)}</div>`;$('#cal_new').disabled=true;return;}  // manufacturer is calibrating
   if(!s||!s.active||($('#ov_wiz').hidden===false)){el.innerHTML='';return;}
   const ss=s.session;
   el.innerHTML=`<div class="banner warn" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between">

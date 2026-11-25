@@ -70,7 +70,9 @@ refused for a gas whose client value would stay on top. Steps: set up → before
 → apply (new zero, or new gain = gas value ÷ reading) → after (records again to
 check) → save. Each run is kept as a calibration record with the cylinder
 details, pre/post values, pass/fail, its readings (CSV) and a printable
-certificate. The Client never receives gains/offsets from the API.
+certificate. The Client never receives gains/offsets from the API, and sees only
+the calibration records it made itself (the Manufacturer sees all records); while
+the Manufacturer is calibrating, the Client can't see, continue or cancel it.
 
 Timings and limits can be tuned in `config.yaml → calibration:`.
 

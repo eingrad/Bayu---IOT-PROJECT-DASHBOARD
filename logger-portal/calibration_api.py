@@ -148,10 +148,30 @@ def _need_setup() -> None:
                                  "python3 calibration.py init")
 
 
-def _need_session() -> dict:
+def _creator(rec: dict) -> str:
+    """Which login made a record or session (older records have no role field)."""
+    r = rec.get("role")
+    if r in ("client", "manufacturer"):
+        return r
+    if rec.get("level") == "manufacturer" or str(rec.get("by", "")).endswith("(manufacturer)"):
+        return "manufacturer"
+    return "client"
+
+
+def _visible(rec: dict, role: str) -> bool:
+    """The Manufacturer sees everything; the Client only what the Client made."""
+    return role == "manufacturer" or _creator(rec) == "client"
+
+
+MFR_BUSY = "The manufacturer is calibrating this logger right now. You can start your own calibration when it's finished."
+
+
+def _need_session(role: str) -> dict:
     s = _load_session()
     if not s:
         raise HTTPException(409, "No calibration is running")
+    if not _visible(s, role):
+        raise HTTPException(403, MFR_BUSY)
     return s
 
 
@@ -350,13 +370,15 @@ def reset(body: dict, role: str = Depends(require_login), creds: HTTPBasicCreden
         raise HTTPException(403, f"The {role} login can't clear the {level} level")
     _need_setup()
     with _lock:
-        if _load_session():
-            raise HTTPException(409, "A calibration is running. Finish or cancel it first.")
+        running = _load_session()
+        if running:
+            raise HTTPException(409, "A calibration is running. Finish or cancel it first."
+                                if _visible(running, role) else MFR_BUSY)
         removed = C.clear_gas(level, gas)
         if not removed:
             raise HTTPException(400, f"There are no {LVNAME.get(level, level)} values for {label(gas, role)}")
         now_lv = C.load().resolve(gas, C.groups_for(gas)[0])[1]
-        rec = {"kind": "reset", "gases": [gas], "level": level, "by": who(role, creds), "t0": time.time(),
+        rec = {"kind": "reset", "gases": [gas], "level": level, "by": who(role, creds), "role": role, "t0": time.time(),
                "note": f"{LVNAME[level]} values cleared", "removed": removed}
         rid = _store().add_calibration(rec)
     return {"ok": True, "id": rid, "now_uses": now_lv}
@@ -367,24 +389,24 @@ def reset(body: dict, role: str = Depends(require_login), creds: HTTPBasicCreden
 # --------------------------------------------------------------------------
 @router.get("/records")
 def records(role: str = Depends(require_login)):
-    return {"records": [_public_record(r, role, full=False) for r in _store().list_calibrations()]}
+    return {"records": [_public_record(r, role, full=False) for r in _store().list_calibrations() if _visible(r, role)]}
 
 
-def _record_or_404(rid: int) -> dict:
+def _record_or_404(rid: int, role: str) -> dict:
     rec = _store().get_calibration(rid)
-    if not rec:
+    if not rec or not _visible(rec, role):  # 404 either way, so a client can't probe for manufacturer records
         raise HTTPException(404, "No such calibration record")
     return rec
 
 
 @router.get("/records/{rid}")
 def record(rid: int, role: str = Depends(require_login)):
-    return _public_record(_record_or_404(rid), role, full=True)
+    return _public_record(_record_or_404(rid, role), role, full=True)
 
 
 @router.get("/records/{rid}/data.csv")
 def record_csv(rid: int, role: str = Depends(require_login)):
-    rec = _record_or_404(rid)
+    rec = _record_or_404(rid, role)
     d = rec.get("data")
     if not d:
         raise HTTPException(404, "This record has no readings")
@@ -418,7 +440,7 @@ def _fmt_v(v, gas) -> str:
 
 @router.get("/records/{rid}/certificate", response_class=HTMLResponse)
 def certificate(rid: int, role: str = Depends(require_login)):
-    rec = _record_or_404(rid)
+    rec = _record_or_404(rid, role)
     if rec["kind"] == "reset":
         raise HTTPException(400, "Resets have no certificate")
     pub = _public_record(rec, role, full=False)
@@ -487,6 +509,8 @@ def session_get(role: str = Depends(require_login)):
         s = _load_session()
         if not s:
             return {"active": False}
+        if not _visible(s, role):
+            return {"active": False, "busy": MFR_BUSY}
         _save_session(s)  # keep the reader in fast mode while someone is watching
         return _state(s, role)
 
@@ -561,8 +585,10 @@ def session_start(body: dict, role: str = Depends(require_login), creds: HTTPBas
                                      f"{'zero' if kind == 'zero' else 'span'} values, which stay on top. Clear the client "
                                      f"values first (Calibration values in use → All levels → Clear client values).")
     with _lock:
-        if _load_session():
-            raise HTTPException(409, "A calibration is already running. Finish or cancel it first.")
+        running = _load_session()
+        if running:
+            raise HTTPException(409, "A calibration is already running. Finish or cancel it first."
+                                if _visible(running, role) else MFR_BUSY)
         _store()  # storage must be on
         s = {"id": uuid.uuid4().hex[:10], "type": kind, "gases": gases, "target": targets[gases[0]],
              "targets": targets, "cyl_ppm": cyl, "source": source, "cylinders": cylinders, "adds": adds,
@@ -576,7 +602,7 @@ def session_start(body: dict, role: str = Depends(require_login), creds: HTTPBas
 @router.post("/session/stop")
 def session_stop(role: str = Depends(require_login)):
     with _lock:
-        s = _need_session()
+        s = _need_session(role)
         if s["phase"] != "before":
             raise HTTPException(409, "Already stopped")
         st = _state(s, role)
@@ -618,7 +644,7 @@ def session_stop(role: str = Depends(require_login)):
 @router.post("/session/apply")
 def session_apply(role: str = Depends(require_login)):
     with _lock:
-        s = _need_session()
+        s = _need_session(role)
         if s["phase"] != "review":
             raise HTTPException(409, "Nothing to apply")
         level = s["level"]
@@ -649,6 +675,8 @@ def session_cancel(role: str = Depends(require_login)):
         s = _load_session()
         if not s:
             return {"active": False}
+        if not _visible(s, role):
+            raise HTTPException(403, MFR_BUSY)
         undone = s["phase"] == "after"
         if undone:
             _undo(s)
@@ -659,7 +687,7 @@ def session_cancel(role: str = Depends(require_login)):
 @router.post("/session/save")
 def session_save(role: str = Depends(require_login)):
     with _lock:
-        s = _need_session()
+        s = _need_session(role)
         st = _state(s, role)
         if not st["can_save"]:
             raise HTTPException(409, "Keep the gas flowing until enough after-correction readings are recorded")
@@ -673,7 +701,7 @@ def session_save(role: str = Depends(require_login)):
             results[g] = {**r, "post": post, "n_post": len(post_vals), "pass": _passes(s, g, post, cfg)}
         rec = {"kind": s["type"], "gases": s["gases"], "target": s["target"], "targets": s.get("targets"),
                "cyl_ppm": s["cyl_ppm"], "source": s.get("source"), "cylinders": s.get("cylinders"), "adds": s.get("adds"),
-               "tol": s["tol"], "info": s["info"], "level": s["level"], "by": s["by"],
+               "tol": s["tol"], "info": s["info"], "level": s["level"], "by": s["by"], "role": s.get("role"),
                "t0": s["t0"], "t_stop": s["t_stop"], "t_apply": s["t_apply"], "t1": now,
                "cal_version": s["cal_version"], "results": results, "data": data}
         rid = _store().add_calibration(rec)
