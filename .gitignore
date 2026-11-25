@@ -33,3 +33,7 @@ logger-portal/data/
 
 # Logger portal: calibration levels, manufacturer login hash, session file (per device, never committed)
 logger-portal/calibration/
+
+# Python bytecode caches
+__pycache__/
+*.pyc
