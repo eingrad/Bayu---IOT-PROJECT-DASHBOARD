@@ -116,7 +116,7 @@
   .phead{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;justify-content:space-between;margin-bottom:4px}
   .lv{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
   .lv::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
-  .lv-factory{color:var(--lv-factory);background:var(--lv-factory-bg)} .lv-manufacturer{color:var(--lv-mfr);background:var(--lv-mfr-bg)} .lv-user{color:var(--lv-user);background:var(--lv-user-bg)}
+  .lv-factory,.lv-default{color:var(--lv-factory);background:var(--lv-factory-bg)} .lv-manufacturer{color:var(--lv-mfr);background:var(--lv-mfr-bg)} .lv-user{color:var(--lv-user);background:var(--lv-user-bg)}
   .st{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}
   .st.ok{color:var(--ok);background:rgba(22,163,74,.14)} .st.bad{color:var(--bad);background:rgba(220,38,38,.13)} .st.warn{color:var(--warn);background:rgba(217,119,6,.14)} .st.none{color:var(--muted);background:var(--chip)}
   .calwrap{overflow-x:auto;margin-top:14px;border:1px solid var(--line);border-radius:12px}
@@ -1091,7 +1091,7 @@ const GUNIT={co:'ppm',ox:'ppb',no2:'ppb',so2:'ppb',o3:'ppb'};
 const GNAME={co:'CO-B4',ox:'OX-B431 (O₃ + NO₂)',no2:'NO2-B43F',so2:'SO2-B4',o3:'worked out as OX − NO₂'};
 const CAL_GASES=['co','ox','no2','so2'];
 const CYL_DEFAULT={co:10,ox:0.2,no2:0.5,so2:0.5};
-const LVN={factory:'Factory',manufacturer:'Manufacturer',user:'User'};
+const LVN={factory:'Factory',manufacturer:'Manufacturer',user:'User',default:'Default'};  // the Client only ever sees User / Default
 const glabel=g=>g==='ox'&&ROLE==='client'?'O₃':GLBL[g];        // the Client sees the OX sensor as O₃
 const gname=g=>g==='ox'&&ROLE==='client'?'OX-B431':GNAME[g];
 const gdec=g=>GUNIT[g]==='ppm'?3:1;
@@ -1158,7 +1158,10 @@ function vtxt(g,k,v){if(v==null)return null;return k==='zero'?`${cnum(v[0],4)} /
 function renderCalValues(){
   const v=CALV;if(!v)return;
   const gases=Object.keys(v.gases),cols=VORDER.filter(k=>gases.some(g=>v.gases[g][k]));
-  $('#cal_vhint').innerHTML=`Each value comes from the highest level that has one: ${lvChip('user')} → ${lvChip('manufacturer')} → ${lvChip('factory')}<br>Your calibrations save to ${lvChip(ROLE==='client'?'user':'manufacturer')}. Factory values are read-only.`;
+  const client=ROLE==='client',levels=client?['user','default']:['user','manufacturer','factory'];
+  $('#cal_vhint').innerHTML=client
+    ?`${lvChip('user')} values come from your own calibrations; the others are the ${lvChip('default')} calibration.<br>Your calibrations save to ${lvChip('user')}, and you can reset back to the default at any time.`
+    :`Each value comes from the highest level that has one: ${lvChip('user')} → ${lvChip('manufacturer')} → ${lvChip('factory')}<br>Your calibrations save to ${lvChip('manufacturer')}. Factory values are read-only.`;
   $('#cal_vhead').innerHTML=`<tr><th>Gas</th>${cols.map(k=>`<th>${esc(VTITLE[k])}</th>`).join('')}<th></th></tr>`;
   $('#cal_vbody').innerHTML=gases.map(g=>{
     const row=v.gases[g],open=CEXP===g,has=(v.has||{})[g]||{};
@@ -1167,18 +1170,18 @@ function renderCalValues(){
       <td><button class="btn ghost small" data-cact="expand" data-g="${g}" aria-expanded="${open}">${open?'Hide levels':'All levels'}</button></td></tr>`;
     if(open){
       const acts=[];
-      if(ROLE==='client'&&has.user)acts.push(`<button class="btn ghost small" data-cact="reset" data-lv="user" data-g="${g}">Reset ${esc(glabel(g))} to manufacturer values</button>`);
+      if(ROLE==='client'&&has.user)acts.push(`<button class="btn ghost small" data-cact="reset" data-lv="user" data-g="${g}">Reset ${esc(glabel(g))} to default values</button>`);
       if(ROLE==='manufacturer'){
         if(has.user)acts.push(`<button class="btn ghost small" data-cact="reset" data-lv="user" data-g="${g}">Clear client values</button>`);
         if(has.manufacturer)acts.push(`<button class="btn ghost small" data-cact="reset" data-lv="manufacturer" data-g="${g}">Reset to factory values</button>`);
       }
       const lcols=VORDER.filter(k=>row[k]);
       h+=`<tr class="expand"><td colspan="${cols.length+2}"><div style="overflow-x:auto"><table class="lvtable"><thead><tr><th>Level</th>${lcols.map(k=>`<th>${esc(VSHORT[k])}</th>`).join('')}</tr></thead><tbody>
-        ${['user','manufacturer','factory'].map(lv=>`<tr><td>${lvChip(lv)}${lv==='factory'?' <span class="sub">read-only</span>':''}</td>${lcols.map(k=>{
+        ${levels.map(lv=>`<tr><td>${lvChip(lv)}${lv==='factory'?' <span class="sub">read-only</span>':''}</td>${lcols.map(k=>{
           const x=row[k].levels[lv],use=row[k].level===lv;
           return x==null?'<td class="empty">—</td>':`<td class="${use?'use':''}"><span class="mono">${esc(vtxt(g,k,x))}</span>${use?' ✓':''}</td>`;}).join('')}</tr>`).join('')}
         </tbody></table></div>
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">${acts.join('')||`<span class="sub">${ROLE==='client'?'You have no own values for this gas; it uses the manufacturer’s calibration.':'Nothing to reset for this gas.'}</span>`}</div></td></tr>`;
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">${acts.join('')||`<span class="sub">${ROLE==='client'?'You have no own values for this gas; it uses the default calibration.':'Nothing to reset for this gas.'}</span>`}</div></td></tr>`;
     }
     return h;
   }).join('');
@@ -1366,10 +1369,10 @@ function renderWizard(){
       return `<tr><td><b>${esc(glabel(g))}</b></td><td class="mono">${zero?'0 ppm':esc(concOf(ss,g))}</td>
         <td class="mono">${cnum(r.pre,gdec(g))} ${GUNIT[g]} <span class="sub">(${calErr(ss.type,g,tgt(ss,g),r.pre)})</span></td>${tail}</tr>`;}).join('');
     const note=zero?'The new zero is the electrode voltages measured in zero air.':client?'':'The new gain is gas value ÷ reading.';
-    body=`<div class="callout">Pre-calibration is the average of the last ${Math.round((CALSET.pre_window_s||180)/60)} minutes. ${note}</div>
+    body=`<div class="callout">Pre-calibration is the average of the last ${(CALSET.pre_window_s||180)>=60?Math.round((CALSET.pre_window_s||180)/60)+' minutes':(CALSET.pre_window_s)+' seconds'}. ${note}</div>
       <div style="overflow-x:auto"><table style="min-width:${head.length>3?640:420}px"><thead><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>
       ${(ss.warnings||[]).map(x=>`<div class="banner warn">${esc(x)}</div>`).join('')}
-      <div class="callout">This will be saved to the ${lvChip(lv)} level. ${lv==='user'?'The manufacturer and factory values are kept, and you can reset back to them at any time.':'The factory values are kept.'}</div>`;
+      <div class="callout">This will be saved to the ${lvChip(lv)} level. ${lv==='user'?'The default calibration is kept, and you can reset back to it at any time.':'The factory values are kept.'}</div>`;
     foot=`<button class="btn ghost" data-cact="w-cancel">Cancel (nothing changed)</button><button class="btn" data-cact="w-apply">Apply correction</button>`;
   }
   else if(w.step===5){
@@ -1445,7 +1448,8 @@ document.addEventListener('click',async e=>{
     case 'expand':CEXP=CEXP===d.g?null:d.g;renderCalValues();break;
     case 'reset':{
       try{const r=await post('/api/calibration/reset',{gas:d.g,level:d.lv});
-        toast(`${glabel(d.g)}: ${LVN[d.lv]} values cleared. It now uses the ${LVN[r.now_uses]} values.`);}
+        toast(ROLE==='client'?`${glabel(d.g)}: your values cleared. It now uses the default values.`
+          :`${glabel(d.g)}: ${LVN[d.lv]} values cleared. It now uses the ${LVN[r.now_uses]} values.`);}
       catch(err){toast(errMsg(err));}
       loadCalibration();break;}
     case 'view':openRecord(+d.id);break;

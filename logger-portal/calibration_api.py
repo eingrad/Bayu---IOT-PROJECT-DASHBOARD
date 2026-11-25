@@ -163,7 +163,7 @@ def _visible(rec: dict, role: str) -> bool:
     return role == "manufacturer" or _creator(rec) == "client"
 
 
-MFR_BUSY = "The manufacturer is calibrating this logger right now. You can start your own calibration when it's finished."
+MFR_BUSY = "This logger is being calibrated right now. You can start your own calibration when it's finished."
 
 
 def _need_session(role: str) -> dict:
@@ -341,11 +341,37 @@ def _public_record(rec: dict, role: str, full: bool) -> dict:
 # --------------------------------------------------------------------------
 # Values in use + resets
 # --------------------------------------------------------------------------
+def _client_table(cal, gases) -> dict:
+    """What the Client sees: its own value ("user") or the value used without it
+    ("default"); the manufacturer and factory levels are not named or shown apart."""
+    out = {}
+    for g in gases:
+        out[g] = {}
+        for grp in CLIENT_GROUPS:
+            own = cal.layers["user"].get(g, {}).get(grp)
+            dflt = next(cal.layers[lv][g][grp] for lv in ("manufacturer", "factory")
+                        if cal.layers[lv].get(g, {}).get(grp) is not None)
+            out[g][grp] = {"value": own if own is not None else dflt,
+                           "level": "user" if own is not None else "default",
+                           "levels": {"user": own, "default": dflt}}
+    return out
+
+
 @router.get("/values")
 def values(role: str = Depends(require_login)):
     cal = C.load()
     client = role == "client"
     gases = C.GASES if client else C.ALL
+    if client:
+        return {
+            "role": role, "version": cal.version, "errors": [],
+            "labels": {g: label(g, role) for g in gases},
+            "units": {g: C.UNIT[g] for g in gases},
+            "gases": _client_table(cal, gases),
+            "has": {g: {"user": bool(cal.layers["user"].get(g))} for g in gases},
+            "settings": settings(),
+            "set_up": C.level_path("manufacturer").exists(),
+        }
     return {
         "role": role,
         "version": cal.version,
@@ -367,7 +393,7 @@ def reset(body: dict, role: str = Depends(require_login), creds: HTTPBasicCreden
         raise HTTPException(400, "Unknown gas")
     allowed = ("user",) if role == "client" else ("user", "manufacturer")
     if level not in allowed:
-        raise HTTPException(403, f"The {role} login can't clear the {level} level")
+        raise HTTPException(403, "You can only clear your own values")
     _need_setup()
     with _lock:
         running = _load_session()
@@ -381,7 +407,7 @@ def reset(body: dict, role: str = Depends(require_login), creds: HTTPBasicCreden
         rec = {"kind": "reset", "gases": [gas], "level": level, "by": who(role, creds), "role": role, "t0": time.time(),
                "note": f"{LVNAME[level]} values cleared", "removed": removed}
         rid = _store().add_calibration(rec)
-    return {"ok": True, "id": rid, "now_uses": now_lv}
+    return {"ok": True, "id": rid, "now_uses": "default" if role == "client" else now_lv}
 
 
 # --------------------------------------------------------------------------
