@@ -209,6 +209,18 @@ class Store:
         """Chart data: readings bucketed into at most `points` time slots, with
         the mean, min and max of each field per slot. When the range is short
         enough every slot holds one reading, i.e. the raw data."""
+        conn = self._connect()
+        try:
+            # Size the slots to the span that actually has data, so a recording
+            # that started recently isn't averaged as if it covered the whole range.
+            first = conn.execute(
+                "SELECT MIN(ts) FROM readings WHERE stream = ? AND ts >= ? AND ts < ?",
+                (stream, start, end),
+            ).fetchone()[0]
+        finally:
+            conn.close()
+        if first is not None:
+            start = max(start, first)
         bucket = max(1, math.ceil((end - start) / max(1, points)))
         cols, params = [], []
         for i, key in enumerate(fields):
