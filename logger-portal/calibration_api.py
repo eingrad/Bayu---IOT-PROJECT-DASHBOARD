@@ -53,6 +53,42 @@ def label(gas: str, role: str) -> str:
     return "O₃" if gas == "ox" and role == "client" else LABEL[gas]
 
 
+GASNAME = {"co": "CO", "ox": "O₃", "no2": "NO₂", "so2": "SO₂"}  # what the span gas itself is
+
+
+def _tgt(s: dict, g: str) -> float:
+    """Span target of one gas in its display unit (older records have one target)."""
+    t = s.get("targets") or {}
+    return float(t[g]) if g in t else float(s.get("target") or 0.0)
+
+
+def _cyl_ppm(s: dict, g: str) -> float:
+    c = s.get("cyl_ppm")
+    return float(c.get(g, 0.0)) if isinstance(c, dict) else float(c or 0.0)
+
+
+def _conc_txt(s: dict, g: str) -> str:
+    """'0.5 ppm = 500 ppb', or for the O3 sensor with NO2: '0.2 ppm O₃ + 0.5 ppm NO₂ = 700 ppb'."""
+    if (s.get("type") or s.get("kind")) == "zero":
+        return "0 ppm (zero air)"
+    t, unit = _tgt(s, g), C.UNIT[g]
+    adds = (s.get("adds") or {}).get(g) or []
+    if adds:
+        parts = [f"{_cyl_ppm(s, x):g} ppm {GASNAME[x]}" for x in [g] + adds]
+        return " + ".join(parts) + f" = {t:g} {unit}"
+    return f"{t / 1000:g} ppm = {t:g} ppb" if unit == "ppb" else f"{t:g} ppm"
+
+
+def _source(s: dict, g: str) -> dict:
+    """Where a gas came from: a cylinder (company + certificate) or the ozone calibrator."""
+    kind = s.get("type") or s.get("kind")
+    if kind == "span" and g == "ox":
+        return {"from": "Ozone calibrator", "cert": ""}
+    cyl = (s.get("cylinders") or {}).get(g) or {}
+    info = s.get("info") or {}
+    return {"from": cyl.get("company") or info.get("company") or "", "cert": cyl.get("cert") or info.get("cert") or ""}
+
+
 def settings() -> dict:
     c = (load_config().get("calibration") or {})
     return {
@@ -179,14 +215,15 @@ def _stable(s: dict, data: dict, gas: str, cfg: dict) -> dict:
     if len(recent) < 2 or len(prior) < 2:
         return {"stable": False, "why": "settling"}
     diff = abs(_mean(recent) - _mean(prior))
-    limit = (s["target"] * cfg["stable_span_pct"] / 100.0 if s["type"] == "span"
+    limit = (_tgt(s, gas) * cfg["stable_span_pct"] / 100.0 if s["type"] == "span"
              else float(cfg["stable_zero"].get(gas, 3.0)))
     return {"stable": diff <= limit, "why": "stable" if diff <= limit else "settling", "drift": diff, "limit": limit}
 
 
 def _passes(s: dict, gas: str, post: float, cfg: dict) -> bool:
     if s["type"] == "span":
-        return abs(post - s["target"]) / s["target"] * 100.0 <= s["tol"]
+        t = _tgt(s, gas)
+        return abs(post - t) / t * 100.0 <= s["tol"]
     return abs(post) <= float(cfg["zero_pass"].get(gas, 10.0))
 
 
@@ -248,9 +285,12 @@ def _public_result(r: dict, role: str) -> dict:
 
 
 def _public_session(s: dict, role: str) -> dict:
-    keep = ("id", "type", "gases", "target", "cyl_ppm", "tol", "level", "by", "t0", "t_stop", "t_apply",
-            "phase", "info", "warnings")
+    keep = ("id", "type", "gases", "target", "targets", "cyl_ppm", "source", "cylinders", "adds", "tol", "level",
+            "by", "t0", "t_stop", "t_apply", "phase", "info", "warnings")
     out = {k: s.get(k) for k in keep}
+    out["targets"] = {g: _tgt(s, g) for g in s["gases"]}
+    out["conc_text"] = {g: _conc_txt(s, g) for g in s["gases"]}
+    out["sources"] = {g: _source(s, g) for g in s["gases"]}
     out["labels"] = {g: label(g, role) for g in s["gases"]}
     out["units"] = {g: C.UNIT[g] for g in s["gases"]}
     if s.get("results"):
@@ -262,6 +302,10 @@ def _public_record(rec: dict, role: str, full: bool) -> dict:
     r = {k: v for k, v in rec.items() if k not in ("data", "removed")}
     r["labels"] = {g: label(g, role) for g in rec.get("gases", [])}
     r["units"] = {g: C.UNIT[g] for g in rec.get("gases", [])}
+    if rec.get("kind") in ("zero", "span"):
+        r["targets"] = {g: _tgt(rec, g) for g in rec["gases"]}
+        r["conc_text"] = {g: _conc_txt(rec, g) for g in rec["gases"]}
+        r["sources"] = {g: _source(rec, g) for g in rec["gases"]}
     if rec.get("results"):
         r["results"] = {g: _public_result(x, role) for g, x in rec["results"].items()}
         r["pass_all"] = all(x.get("pass") for x in rec["results"].values())
@@ -372,10 +416,6 @@ def _fmt_v(v, gas) -> str:
     return f"{v:.3f}" if C.UNIT[gas] == "ppm" else f"{v:.1f}"
 
 
-def _cyl(gas, target) -> str:
-    return f"{target / 1000:g} ppm = {target:g} ppb" if C.UNIT[gas] == "ppb" else f"{target:g} ppm"
-
-
 @router.get("/records/{rid}/certificate", response_class=HTMLResponse)
 def certificate(rid: int, role: str = Depends(require_login)):
     rec = _record_or_404(rid)
@@ -390,16 +430,14 @@ def certificate(rid: int, role: str = Depends(require_login)):
         ("Type", "Zero calibration" if rec["kind"] == "zero" else "Span calibration"),
         ("Device", f"{dev.get('name', '')} ({dev.get('id', '')})"),
         ("Gas", ", ".join(label(g, role) for g in rec["gases"])),
-        ("Gas value", "0 ppm (zero air)" if rec["kind"] == "zero" else _cyl(g0, rec["target"])),
         ("Start time", _fmt_t(rec["t0"])), ("End time", _fmt_t(rec.get("t1"))),
         ("Gas flow rate", f"{info.get('flow', '—')} SCCM"), ("Gas pressure", f"{info.get('pressure', '—')} bar"),
-        ("Temperature", f"{info.get('temp', '—')} °C"), ("Cylinder company", info.get("company") or "—"),
-        ("Cylinder certificate no.", info.get("cert") or "—"),
+        ("Temperature", f"{info.get('temp', '—')} °C"),
         ("Pass limit", f"± {rec.get('tol')} %" if rec["kind"] == "span" else "zero ± limit per gas"),
         ("Done by", rec.get("by", "")), ("Saved to level", LVNAME.get(rec["level"], rec["level"])),
     ]
     out_rows = "".join(
-        f"<tr><td>{e(label(g, role))}</td><td>{e('0 ppm' if rec['kind'] == 'zero' else _cyl(g, rec['target']))}</td>"
+        f"<tr><td>{e(label(g, role))}</td><td>{e('0 ppm' if rec['kind'] == 'zero' else _conc_txt(rec, g))}</td>"
         f"<td>{_fmt_v(r.get('pre'), g)} {C.UNIT[g]}</td><td>{_fmt_v(r.get('post'), g)} {C.UNIT[g]}</td>"
         f"<td>{'PASS' if r.get('pass') else 'FAIL'}</td></tr>"
         for g, r in pub["results"].items())
@@ -410,6 +448,16 @@ def certificate(rid: int, role: str = Depends(require_login)):
         f"<tr><td>{e(label(g, role))}</td><td>Gain &amp; offset (m₃ · c₃)</td>"
         f"<td>m {r['before'][0]:.4f} · c {r['before'][1]:g}</td><td>m {r['after'][0]:.4f} · c {r['after'][1]:g}</td></tr>"
         for g, r in pub["results"].items() if "after" in r)
+    if rec["kind"] == "zero":
+        src = _source(rec, g0)
+        used = (f"<tr><td>Zero air ({e(', '.join(label(g, role) for g in rec['gases']))})</td><td>0 ppm</td>"
+                f"<td>{e(src['from'] or '—')}</td><td>{e(src['cert'] or '—')}</td></tr>")
+    else:
+        used = "".join(f"<tr><td>{e(label(g, role))}</td><td>{e(_conc_txt(rec, g))}</td>"
+                       f"<td>{e(_source(rec, g)['from'] or '—')}</td><td>{e(_source(rec, g)['cert'] or '—')}</td></tr>"
+                       for g in rec["gases"])
+    used_block = (f"<h2>Gas used</h2><table><tr><th>Gas</th><th>Gas value</th><th>From</th>"
+                  f"<th>Certificate no.</th></tr>{used}</table>")
     chg_block = (f"<h2>What changed</h2><table><tr><th>Gas</th><th>Setting</th><th>Value before calibration</th>"
                  f"<th>Value after calibration</th></tr>{chg}</table>") if chg else ""
     page = f"""<!doctype html><html><head><meta charset="utf-8"><title>Calibration certificate #{rid}</title>
@@ -422,6 +470,7 @@ button{{margin-top:24px;padding:9px 16px;border:0;border-radius:10px;background:
 @media print{{button{{display:none}} body{{margin:0}}}}</style></head><body>
 <h1>Calibration certificate</h1><div class="sub">Record #{rid} · Bayu Logger</div>
 <dl>{''.join(f'<dt>{e(k)}</dt><dd>{e(str(v))}</dd>' for k, v in rows)}</dl>
+{used_block}
 <h2>Calibration output</h2><table><tr><th>Gas</th><th>Gas value</th><th>Pre-calibration</th><th>Post-calibration</th><th>Result</th></tr>{out_rows}</table>
 {chg_block}
 <div class="sign"><div>Calibrated by</div><div>Checked by</div></div>
@@ -461,23 +510,62 @@ def session_start(body: dict, role: str = Depends(require_login), creds: HTTPBas
     gases = [g for g in C.GASES if g in (body.get("gases") or [])]
     if not gases:
         raise HTTPException(400, "Pick at least one gas")
-    if kind == "span" and len(gases) != 1:
-        raise HTTPException(400, "A span calibration is for one gas at a time")
-    cert = str(body.get("cert") or "").strip()
-    if not cert:
-        raise HTTPException(400, "Enter the cylinder certificate no. before you start recording")
-    cyl_ppm, target, tol = 0.0, 0.0, None
-    if kind == "span":
-        cyl_ppm = _num(body, "cyl_ppm", "cylinder concentration in ppm")
-        target = cyl_ppm * 1000.0 if C.UNIT[gases[0]] == "ppb" else cyl_ppm
+    txt = lambda k: str(body.get(k) or "").strip()[:80]
+    info = {k: txt(k) for k in ("flow", "pressure", "temp", "company", "cert")}
+    cyl, targets, adds, cylinders, source, tol = {}, {}, {}, {}, None, None
+    cyl_gases = [g for g in gases if g != "ox"] if kind == "span" else gases  # ozone comes from a calibrator
+    if kind == "zero":
+        if not info["cert"]:
+            raise HTTPException(400, "Enter the cylinder certificate no. before you start recording")
+        targets = {g: 0.0 for g in gases}
+    else:
+        raw = body.get("cyl_ppm")
+        for g in gases:
+            v = raw.get(g) if isinstance(raw, dict) else raw
+            try:
+                v = float(v)
+            except (TypeError, ValueError):
+                v = 0.0
+            if not v > 0:
+                raise HTTPException(400, f"Enter the {label(g, role)} concentration in ppm, above 0")
+            cyl[g] = v
+            targets[g] = v * 1000.0 if C.UNIT[g] == "ppb" else v
+        if "ox" in gases and "no2" in gases:  # the O3 sensor (OX-B431) also reacts to NO2
+            targets["ox"] += targets["no2"]
+            adds["ox"] = ["no2"]
+        source = body.get("source") if len(cyl_gases) > 1 else "single"
+        if source not in ("single", "mixed", "separate"):
+            raise HTTPException(400, "Choose one mixed cylinder or separate cylinders")
+        if source == "separate":
+            per = body.get("cylinders") or {}
+            for g in cyl_gases:
+                c = per.get(g) or {}
+                cert = str(c.get("cert") or "").strip()[:80]
+                if not cert:
+                    raise HTTPException(400, f"Enter the cylinder certificate no. for {label(g, role)} before you start recording")
+                cylinders[g] = {"company": str(c.get("company") or "").strip()[:80], "cert": cert}
+            info["company"] = info["cert"] = ""
+        else:
+            if cyl_gases and not info["cert"]:
+                raise HTTPException(400, "Enter the cylinder certificate no. before you start recording")
+            cylinders = {g: {"company": info["company"], "cert": info["cert"]} for g in cyl_gases}
         tol = _num(body, "tol", "pass limit (%)")
-    info = {k: str(body.get(k) or "").strip()[:80] for k in ("flow", "pressure", "temp", "company")}
-    info["cert"] = cert[:80]
+    if role == "manufacturer":
+        # A client value stays on top of the manufacturer level, so a manufacturer
+        # calibration of the same setting would change nothing that is used.
+        key = "zero" if kind == "zero" else "out"
+        user = C.load().layers["user"]
+        blocked = [label(g, role) for g in gases if (user.get(g) or {}).get(key) is not None]
+        if blocked:
+            raise HTTPException(409, f"{', '.join(blocked)} {'uses' if len(blocked) == 1 else 'use'} the client's own "
+                                     f"{'zero' if kind == 'zero' else 'span'} values, which stay on top. Clear the client "
+                                     f"values first (Calibration values in use → All levels → Clear client values).")
     with _lock:
         if _load_session():
             raise HTTPException(409, "A calibration is already running. Finish or cancel it first.")
         _store()  # storage must be on
-        s = {"id": uuid.uuid4().hex[:10], "type": kind, "gases": gases, "target": target, "cyl_ppm": cyl_ppm,
+        s = {"id": uuid.uuid4().hex[:10], "type": kind, "gases": gases, "target": targets[gases[0]],
+             "targets": targets, "cyl_ppm": cyl, "source": source, "cylinders": cylinders, "adds": adds,
              "tol": tol, "info": info, "level": "user" if role == "client" else "manufacturer",
              "role": role, "by": who(role, creds), "t0": time.time(), "phase": "before",
              "t_stop": None, "t_apply": None, "results": None, "prev": None, "cal_version": None, "warnings": []}
@@ -513,7 +601,7 @@ def session_stop(role: str = Depends(require_login)):
                                         _window(data, g, "b", last - win, last, "op2"))
                 else:
                     key = "out"
-                    after = C.span_from(p, pre, s["target"])
+                    after = C.span_from(p, pre, _tgt(s, g))
                 C.normalise(g, key, after)
             except C.CalibrationError as e:
                 raise HTTPException(409, f"{label(g, role)}: {e}")
@@ -583,7 +671,8 @@ def session_save(role: str = Depends(require_login)):
             post_vals = [v for v, ph in zip(data[g]["v"], data["phase"]) if ph == "a" and v is not None]
             post = _mean(post_vals)
             results[g] = {**r, "post": post, "n_post": len(post_vals), "pass": _passes(s, g, post, cfg)}
-        rec = {"kind": s["type"], "gases": s["gases"], "target": s["target"], "cyl_ppm": s["cyl_ppm"],
+        rec = {"kind": s["type"], "gases": s["gases"], "target": s["target"], "targets": s.get("targets"),
+               "cyl_ppm": s["cyl_ppm"], "source": s.get("source"), "cylinders": s.get("cylinders"), "adds": s.get("adds"),
                "tol": s["tol"], "info": s["info"], "level": s["level"], "by": s["by"],
                "t0": s["t0"], "t_stop": s["t_stop"], "t_apply": s["t_apply"], "t1": now,
                "cal_version": s["cal_version"], "results": results, "data": data}

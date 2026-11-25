@@ -60,9 +60,13 @@ Per gas: zero (WE₀/AE₀), signed sensitivity, and straight-line corrections
 `WE = m₁·OP1 + c₁`, `AE = m₂·OP2 + c₂`, `final = m₃·reading + c₃` (O₃: m₄, c₄).
 With every m = 1 and c = 0 the result is the plain Alphasense formula.
 
-**Calibration tab → + New calibration** runs a zero (zero air, several gases) or
-span (one gas, cylinder value in ppm) calibration in five steps: set up (cylinder
-certificate no. required) → before (reader samples every 5 s; wait for *Stable*)
+**Calibration tab → + New calibration** runs a zero (zero air) or span
+calibration for one or several gases in five steps. Span gases come from one
+mixed cylinder or separate cylinders (concentration per gas in ppm; certificate
+no. required for every cylinder); O₃ comes from an ozone calibrator (the wizard
+warns), and when O₃ and NO₂ are spanned together the O₃ sensor's target is
+O₃ + NO₂ because the OX-B431 reacts to both. A manufacturer calibration is
+refused for a gas whose client value would stay on top. Steps: set up → before (reader samples every 5 s; wait for *Stable*)
 → apply (new zero, or new gain = gas value ÷ reading) → after (records again to
 check) → save. Each run is kept as a calibration record with the cylinder
 details, pre/post values, pass/fail, its readings (CSV) and a printable
