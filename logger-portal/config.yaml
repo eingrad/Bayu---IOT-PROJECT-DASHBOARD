@@ -70,6 +70,20 @@ storage:
   db_path: "data/bayu.db"
   retention_days: 90       # readings older than this are deleted; 0 = keep forever
 
+# Calibration tab (zero/span wizard). The calibration VALUES live in calibration/
+# (factory -> manufacturer -> user levels); `python3 calibration.py init` moves the
+# sensitivity/zeros under sensors: above into calibration/ on first set-up.
+calibration:
+  fast_interval_s: 5       # reader samples this often while a calibration runs
+  pre_window_s: 180        # pre-calibration = average of the last 3 minutes
+  min_before_s: 180        # gas must flow at least this long before Stop
+  min_after_s: 180         # after-correction readings needed before Save
+  stop_anyway_s: 900       # allow Stop after 15 min even if not stable
+  span_tolerance_pct: 3    # default span pass limit (editable per calibration)
+  stable_span_pct: 1       # "Stable" = last 1.5 min within 1% of the 1.5 min before
+  stable_zero: { co: 0.02, ox: 3, no2: 3, so2: 3 }   # same, for zero air (ppm / ppb)
+  zero_pass: { co: 0.05, ox: 10, no2: 10, so2: 10 }  # zero passes if |reading| <= this
+
 # Portal admin login (change this!). Empty password disables auth (dev only).
 portal:
   username: "admin"

@@ -9,11 +9,15 @@
     --bg:#f4f6fb; --panel:#ffffff; --ink:#1f2a44; --muted:#6b7691;
     --line:#e6e9f2; --brand:#3b5bfd; --brand-ink:#fff;
     --ok:#16a34a; --warn:#d97706; --bad:#dc2626; --chip:#eef1fb;
+    --lv-factory:#566079; --lv-factory-bg:#eceef4; --lv-mfr:#6d34d8; --lv-mfr-bg:#efe8fd; --lv-user:#2f4fe0; --lv-user-bg:#e6ecff;
+    --soft:#f6f7fb; --band:rgba(59,91,253,.09); --scrim:rgba(15,20,40,.45);
     color-scheme:light dark;
   }
   @media (prefers-color-scheme:dark){
     :root{ --bg:#0e1220; --panel:#151b2e; --ink:#e8ecf7; --muted:#8b95b3;
-      --line:#232b45; --brand:#5b73ff; --chip:#1b2338; }
+      --line:#232b45; --brand:#5b73ff; --chip:#1b2338;
+      --lv-factory:#aab2c6; --lv-factory-bg:#222a40; --lv-mfr:#b9a0ff; --lv-mfr-bg:#2a2148; --lv-user:#93a5ff; --lv-user-bg:#1e2853;
+      --soft:#11172a; --band:rgba(91,115,255,.14); --scrim:rgba(0,0,0,.6); }
   }
   *{box-sizing:border-box}
   body{margin:0;font:14px/1.5 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
@@ -103,6 +107,58 @@
   .tablewrap td{white-space:nowrap}
   .pager{display:flex;align-items:center;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px;color:var(--muted);font-size:13px}
   .pager .btn{padding:7px 14px}
+  /* calibration */
+  [hidden]{display:none!important}
+  .mono{font-family:ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+  .sub{color:var(--muted);font-size:12px}
+  .btn.small{padding:6px 11px;font-size:13px;white-space:nowrap}
+  .who{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px}
+  .phead{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;justify-content:space-between;margin-bottom:4px}
+  .lv{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+  .lv::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+  .lv-factory{color:var(--lv-factory);background:var(--lv-factory-bg)} .lv-manufacturer{color:var(--lv-mfr);background:var(--lv-mfr-bg)} .lv-user{color:var(--lv-user);background:var(--lv-user-bg)}
+  .st{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}
+  .st.ok{color:var(--ok);background:rgba(22,163,74,.14)} .st.bad{color:var(--bad);background:rgba(220,38,38,.13)} .st.warn{color:var(--warn);background:rgba(217,119,6,.14)} .st.none{color:var(--muted);background:var(--chip)}
+  .calwrap{overflow-x:auto;margin-top:14px;border:1px solid var(--line);border-radius:12px}
+  .calwrap table{min-width:760px} .calwrap th{background:var(--soft);white-space:nowrap} .calwrap td.nw{white-space:nowrap}
+  .cell{display:flex;flex-direction:column;gap:3px;align-items:flex-start} .cell .mono{white-space:nowrap}
+  .lvtable td,.lvtable th{padding:6px 10px;white-space:nowrap;font-size:12.5px} .lvtable td.use{font-weight:700} .lvtable td.empty{color:var(--muted);font-style:italic}
+  tr.expand>td{background:var(--soft)}
+  .overlay{position:fixed;inset:0;z-index:30;background:var(--scrim);display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding:24px 16px}
+  .dlg{background:var(--panel);border:1px solid var(--line);border-radius:18px;width:min(940px,100%);padding:22px;display:flex;flex-direction:column;gap:16px;box-shadow:0 30px 80px -30px rgba(0,0,0,.5)}
+  .dlg-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px} .dlg-head h2{margin:0;font-size:19px}
+  .xbtn{border:0;background:var(--chip);color:var(--ink);width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:18px;flex:none}
+  .box{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:var(--soft)}
+  .box h3{margin:0 0 10px;font-size:13px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+  .info{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 28px;margin:0}
+  .info div{display:grid;grid-template-columns:minmax(120px,auto) 1fr;gap:10px;font-size:13.5px;min-width:0}
+  .info dt{color:var(--muted);text-align:right} .info dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+  .dlg-foot{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center} .dlg-foot .grp{display:flex;flex-wrap:wrap;gap:10px}
+  .wsteps{display:flex;flex-wrap:wrap;gap:6px;list-style:none;margin:0;padding:0}
+  .wsteps li{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--muted);padding:5px 11px 5px 5px;border-radius:999px;background:var(--chip)}
+  .wsteps li span{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--panel);font-size:12px}
+  .wsteps li.on{color:#fff;background:var(--brand)} .wsteps li.on span{color:var(--brand);background:#fff}
+  .wsteps li.done{color:var(--ink)} .wsteps li.done span{color:var(--ok)}
+  .wform{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+  .unitwrap{display:flex;align-items:center;gap:8px} .unitwrap input{width:auto;flex:1;min-width:0} .unitwrap span{color:var(--muted);font-size:13px;white-space:nowrap}
+  .checks{display:flex;flex-wrap:wrap;gap:8px}
+  .checks label{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:10px;padding:7px 11px;cursor:pointer;font-weight:600;font-size:13px;color:var(--ink);margin:0}
+  .checks input{width:auto;accent-color:var(--brand)}
+  .fixed{padding:9px 11px;border:1px dashed var(--line);border-radius:10px;color:var(--muted)}
+  .req{color:var(--bad);font-weight:600}
+  .callout{font-size:13px;padding:11px 14px;border-radius:12px;background:var(--soft);border:1px solid var(--line)}
+  .werr{color:var(--bad);font-size:13px;font-weight:600;min-height:1em}
+  .tiles{display:flex;flex-wrap:wrap;gap:10px}
+  .tile{flex:1 1 170px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;cursor:pointer;background:var(--panel);color:var(--ink);text-align:left;font:inherit}
+  .tile[aria-pressed="true"]{border-color:var(--brand);box-shadow:0 0 0 1px var(--brand)}
+  .tile b{font-family:ui-monospace,Menlo,monospace;font-size:18px} .tile .row2{display:flex;justify-content:space-between;align-items:center;gap:6px;font-weight:600;font-size:13px}
+  .progress{height:6px;border-radius:999px;background:var(--chip);overflow:hidden} .progress i{display:block;height:100%;background:var(--brand);width:0}
+  .schart{position:relative} .schart svg{display:block;width:100%;touch-action:pan-y}
+  .schart text{fill:var(--muted);font-size:11px;font-variant-numeric:tabular-nums} .schart text.lab{fill:var(--ink);font-weight:600}
+  .stip{position:absolute;top:6px;pointer-events:none;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:12px;box-shadow:0 8px 24px -12px rgba(0,0,0,.45);white-space:nowrap;z-index:2}
+  .stip b{display:block;font-family:ui-monospace,Menlo,monospace;font-size:14px} .stip span{color:var(--muted)}
+  .thr{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+  @media(max-width:720px){.info{grid-template-columns:1fr}.info dt{text-align:left}.dlg{padding:16px}}
   code{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--chip);padding:2px 6px;border-radius:6px;word-break:break-all}
   @media(max-width:760px){.side{position:fixed;left:-240px;transition:.2s;z-index:20}.side.open{left:0}.row{grid-template-columns:1fr}}
 </style>
@@ -127,6 +183,7 @@
         <h1 id="devname">Bayu Logger</h1>
         <div class="sub" id="devsub">Local settings portal</div>
       </div>
+      <div class="who" id="who"></div>
       <div class="badges" id="topbadges"></div>
     </header>
 
@@ -213,10 +270,24 @@
 
       <!-- CALIBRATION -->
       <section class="view" id="view-calib">
+        <div id="cal_banner"></div>
+        <div class="panel">
+          <div class="phead">
+            <div><h2>Calibration records</h2>
+              <p class="hint">One record for every zero and span calibration, with the gas used, the readings before and after, and the result.</p></div>
+            <button class="btn" id="cal_new">+ New calibration</button>
+          </div>
+          <div id="cal_resume"></div>
+          <div class="calwrap"><table><thead><tr><th>When</th><th>Type</th><th>Gas</th><th>Before → after</th><th>Result</th><th>Saved to</th><th>By</th><th></th></tr></thead><tbody id="cal_rec"><tr><td colspan="8">Loading…</td></tr></tbody></table></div>
+        </div>
+        <div class="panel">
+          <h2>Calibration values in use</h2>
+          <p class="hint" id="cal_vhint"></p>
+          <div class="calwrap"><table><thead id="cal_vhead"></thead><tbody id="cal_vbody"></tbody></table></div>
+        </div>
         <div class="panel">
           <h2>Sensor signals</h2>
-          <p class="hint">Recent electrode voltages and the resulting concentration, read from the readings saved on this Pi (updates every 20 s).
-            <b>Before</b> zero calibration, wait until both electrode lines are flat (a small spread and drift). <b>After</b> it, in clean air the concentration should sit on the zero line.</p>
+          <p class="hint">Recent electrode voltages and the resulting concentration, from the readings saved on this Pi (updates every 20 s).</p>
           <div class="filters">
             <div class="seg" id="c_sensor" role="group" aria-label="Sensor">
               <button data-sensor="co" class="on">CO</button>
@@ -234,16 +305,10 @@
           <div class="charts" id="c_charts"><div class="empty">Loading…</div></div>
         </div>
         <div class="panel">
-          <h2>Zero calibration</h2>
-          <p class="hint">Expose all sensors to clean air, then run. The reader is paused, <code>zero_cal.py</code> captures new baselines, and the reader restarts automatically.</p>
-          <div class="actions"><button class="btn" id="btnZero">Run zero calibration</button></div>
-        </div>
-        <div class="panel">
-          <h2>Sensor parameters</h2>
-          <p class="hint">Signed sensitivity (mV/ppm) and field-calibrated zeros. Thresholds are [GOOD, MODERATE] upper bounds.</p>
-          <div id="sensorForms"></div>
-          <div class="actions"><button class="btn" id="btnSaveSensors">Save</button>
-            <button class="btn ghost" id="btnSaveSensorsRestart">Save &amp; restart reader</button></div>
+          <h2>Alert thresholds</h2>
+          <p class="hint">Upper limits for GOOD and MODERATE; above MODERATE is UNHEALTHY. The gas reader uses them from its next reading.</p>
+          <div class="thr" id="thrForms"></div>
+          <div class="actions"><button class="btn" id="btnSaveThr">Save</button></div>
         </div>
       </section>
 
@@ -357,6 +422,8 @@
     </div>
   </div>
 </div>
+<div class="overlay" id="ov_rec" hidden><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="rec_title" id="rec_dlg"></div></div>
+<div class="overlay" id="ov_wiz" hidden><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="wiz_title" id="wiz_dlg"></div></div>
 <div class="toast" id="toast"></div>
 <div id="login" style="display:none;position:fixed;inset:0;background:rgba(8,12,24,.65);align-items:center;justify-content:center;z-index:100">
   <form id="loginForm" style="background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px;width:320px;max-width:90vw;box-shadow:0 20px 50px -20px rgba(0,0,0,.5)">
@@ -376,16 +443,19 @@ let CONFIG = {};
 
 function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
 let AUTH = sessionStorage.getItem('bayu_auth')||'';
+// One sign-in box at a time: requests that hit 401 together all wait for the same login.
+let LOGIN_P=null;
 function showLogin(){
-  return new Promise(resolve=>{
+  if(LOGIN_P)return LOGIN_P;
+  return LOGIN_P=new Promise(resolve=>{
     const box=$('#login'); box.style.display='flex'; $('#li_err').textContent='';
     setTimeout(()=>$('#li_pass').focus(),50);
     $('#loginForm').onsubmit=async e=>{
       e.preventDefault();
       const cand=btoa($('#li_user').value+':'+$('#li_pass').value);
       try{
-        const t=await fetch('/api/config',{headers:{Authorization:'Basic '+cand}});
-        if(t.ok){AUTH=cand;sessionStorage.setItem('bayu_auth',AUTH);box.style.display='none';resolve(true);}
+        const t=await fetch('/api/whoami',{headers:{Authorization:'Basic '+cand}});
+        if(t.ok){AUTH=cand;try{sessionStorage.setItem('bayu_auth',AUTH);}catch(_){}box.style.display='none';LOGIN_P=null;resolve(true);}
         else{$('#li_err').textContent='Invalid username or password';}
       }catch(err){$('#li_err').textContent='Cannot reach the server';}
     };
@@ -411,7 +481,7 @@ $$('#nav button').forEach(b=>b.onclick=()=>{
   $$('.view').forEach(v=>v.classList.remove('active'));$('#view-'+b.dataset.view).classList.add('active');
   if(b.dataset.view==='system'){loadNodeRed();loadLiveBroker();}
   if(b.dataset.view==='history'){loadHistory();}
-  if(b.dataset.view==='calib'){loadCalibCharts();}
+  if(b.dataset.view==='calib'){loadCalibCharts();loadCalibration();}
 });
 
 // ---- status / overview ----
@@ -504,31 +574,14 @@ async function loadConfig(){
   $('#m_broker').value=m.broker||'';$('#m_port').value=m.port||8883;$('#m_user').value=m.username||'';
   $('#m_prefix').value=m.topic_prefix||'';$('#m_qos').value=m.qos??2;$('#m_tls').checked=!!m.tls;$('#m_retain').checked=!!m.retain;
   const sp=CONFIG.sampling||{}; $('#s_interval').value=sp.interval_seconds??20; $('#s_avg').value=sp.average_samples??16;
-  renderSensorForms();
+  renderThresholds();
 }
-function renderSensorForms(){
-  const s=CONFIG.sensors||{};
-  $('#sensorForms').innerHTML=Object.entries(s).map(([k,v])=>`
-    <div class="panel" style="margin:0 0 12px;padding:14px">
-      <b>${(v.name||k)} <span style="color:var(--muted)">(${k.toUpperCase()}, ${v.unit||''})</span></b>
-      <div class="row" style="margin-top:10px">
-        <div class="field"><label>Sensitivity mV/ppm</label><input data-s="${k}" data-f="sensitivity" value="${v.sensitivity??''}"></div>
-        <div class="field"><label>Thresholds (GOOD,MOD)</label><input data-s="${k}" data-f="thresholds" value="${(v.thresholds||[]).join(',')}"></div>
-      </div>
-      <div class="row">
-        <div class="field"><label>WE zero (V)</label><input data-s="${k}" data-f="we_zero_v" value="${v.we_zero_v??''}"></div>
-        <div class="field"><label>AE zero (V)</label><input data-s="${k}" data-f="ae_zero_v" value="${v.ae_zero_v??''}"></div>
-      </div>
-    </div>`).join('');
-}
-function collectSensors(){
-  const out={};
-  $$('#sensorForms input').forEach(i=>{
-    const k=i.dataset.s,f=i.dataset.f;out[k]=out[k]||{};
-    out[k][f]= f==='thresholds' ? i.value.split(',').map(x=>x.trim()).filter(x=>x!=='').map(Number)
-                                : (i.value===''?null:Number(i.value));
-  });
-  return out;
+const THR_GASES=['co','no2','so2'];   // OX isn't levelled (it feeds O₃)
+function renderThresholds(){
+  const sens=CONFIG.sensors||{};
+  $('#thrForms').innerHTML=THR_GASES.filter(k=>sens[k]).map(k=>{const v=sens[k],t=v.thresholds||[];
+    return `<div class="field"><label for="thr_${k}_g">${esc(GLBL[k])} (${esc(v.unit||'')}) · GOOD up to / MODERATE up to</label>
+      <div class="unitwrap"><input id="thr_${k}_g" inputmode="decimal" value="${esc(t[0]??'')}"><input id="thr_${k}_m" inputmode="decimal" value="${esc(t[1]??'')}"></div></div>`;}).join('');
 }
 
 async function saveConfig(patch,restart){
@@ -551,15 +604,16 @@ $('#btnTest').onclick=async()=>{
     r.className='badge '+(res.ok?'ok':'bad');r.innerHTML='<i></i>'+res.detail;
   }catch(e){r.className='badge bad';r.innerHTML='<i></i>'+e.message;}
 };
-$('#btnSaveSensors').onclick=()=>saveConfig({sensors:collectSensors()},false);
-$('#btnSaveSensorsRestart').onclick=()=>saveConfig({sensors:collectSensors()},true);
-$('#btnSaveSampling').onclick=()=>saveConfig({sampling:{interval_seconds:+$('#s_interval').value,average_samples:+$('#s_avg').value}},true);
-$('#btnZero').onclick=async e=>{
-  if(!confirm('Ensure sensors are in clean air. Run zero calibration now?'))return;
-  e.target.disabled=true;e.target.textContent='Calibrating…';
-  try{const r=await api('/api/calibrate/zero',{method:'POST'});toast(r.ok?'Zero calibration done':'Calibration finished with warnings');loadConfig();loadCalibCharts();}
-  catch(err){toast('Failed: '+err.message);}finally{e.target.disabled=false;e.target.textContent='Run zero calibration';}
+$('#btnSaveThr').onclick=()=>{
+  const patch={};
+  for(const k of THR_GASES){const g=$('#thr_'+k+'_g'),m=$('#thr_'+k+'_m');if(!g)continue;
+    const a=Number(g.value),b=Number(m.value);
+    if(g.value===''&&m.value===''){patch[k]={thresholds:[]};continue;}
+    if(!(a>0&&b>a)){toast(`${GLBL[k]}: GOOD must be above 0 and MODERATE above GOOD`);return;}
+    patch[k]={thresholds:[a,b]};}
+  saveConfig({sensors:patch},false);
 };
+$('#btnSaveSampling').onclick=()=>saveConfig({sampling:{interval_seconds:+$('#s_interval').value,average_samples:+$('#s_avg').value}},true);
 $$('[data-svc]').forEach(b=>b.onclick=async()=>{
   try{const r=await api('/api/service/'+b.dataset.svc,{method:'POST'});toast('Service '+r.state);refreshStatus();}
   catch(e){toast('Failed: '+e.message);}
@@ -979,8 +1033,8 @@ async function loadCalibCharts(){
     const d=await api('/api/history/series?'+q);if(seq!==C.seq)return;
     if(!d.t.length){box.innerHTML='<div class="empty">No gas readings saved in this window yet. Check that the gas reader is running.</div>';return;}
     const W=Math.max(260,(box.clientWidth||600)-30);box.innerHTML='';
-    box.appendChild(buildChart(fields[0],d,d.series[fields[0]],W,{title:`${K} working electrode (WE · OP1)`,stats:'mV'}));
-    box.appendChild(buildChart(fields[1],d,d.series[fields[1]],W,{title:`${K} auxiliary electrode (AE · OP2)`,stats:'mV'}));
+    box.appendChild(buildChart(fields[0],d,d.series[fields[0]],W,{title:`${glabel(C.sensor)} working electrode (WE · OP1)`,stats:'mV'}));
+    box.appendChild(buildChart(fields[1],d,d.series[fields[1]],W,{title:`${glabel(C.sensor)} auxiliary electrode (AE · OP2)`,stats:'mV'}));
     box.appendChild(buildChart(fields[2],d,d.series[fields[2]],W,{title:`${sc.name||K} concentration`,ref:0,stats:'unit'}));
   }catch(e){if(seq===C.seq)box.innerHTML=`<div class="empty">${esc(errMsg(e))}</div>`;}
   finally{if(seq===C.seq)box.classList.remove('loading');}
@@ -1030,8 +1084,375 @@ let hResize;window.addEventListener('resize',()=>{clearTimeout(hResize);hResize=
 // keep the history fresh while it's on screen (preset ranges, first page only)
 setInterval(()=>{if($('#view-history').classList.contains('active')&&!document.hidden&&$('#h_range').value!=='custom'&&H.page===0)loadHistory();},60000);
 
+// ---- calibration: levels, records and the 5-step wizard (/api/calibration/*) ----
+let ROLE=null,CALV=null,CALSET={},CALREC=[],CEXP=null,REC=null,RECG=null,WZ=null,CALBUSY=false;
+const GLBL={co:'CO',ox:'OX',no2:'NO₂',so2:'SO₂',o3:'O₃'};
+const GUNIT={co:'ppm',ox:'ppb',no2:'ppb',so2:'ppb',o3:'ppb'};
+const GNAME={co:'CO-B4',ox:'OX-B431 (O₃ + NO₂)',no2:'NO2-B43F',so2:'SO2-B4',o3:'worked out as OX − NO₂'};
+const CAL_GASES=['co','ox','no2','so2'];
+const CYL_DEFAULT={co:10,ox:0.2,no2:0.5,so2:0.5};
+const LVN={factory:'Factory',manufacturer:'Manufacturer',user:'User'};
+const glabel=g=>g==='ox'&&ROLE==='client'?'O₃':GLBL[g];        // the Client sees the OX sensor as O₃
+const gname=g=>g==='ox'&&ROLE==='client'?'OX-B431':GNAME[g];
+const gdec=g=>GUNIT[g]==='ppm'?3:1;
+const lvChip=lv=>`<span class="lv lv-${esc(lv)}">${esc(LVN[lv]||lv)}</span>`;
+const passChip=p=>p==null?'<span class="st none">—</span>':p?'<span class="st ok">✓ Pass</span>':'<span class="st bad">✕ Fail</span>';
+function cnum(v,d){if(v==null||!isFinite(v))return '—';const s=Math.abs(v).toFixed(d);return (v<0&&+s!==0?'−':'')+s;}
+function csnum(v,d){const s=cnum(v,d);return (v>0&&+Math.abs(v).toFixed(d)!==0)?'+'+s:s;}
+const pad2=n=>String(n).padStart(2,'0');
+const fmtT=s=>{if(!s)return '—';const d=new Date(s*1000);return `${pad2(d.getHours())}:${pad2(d.getMinutes())}, ${pad2(d.getDate())}/${pad2(d.getMonth()+1)}/${String(d.getFullYear()).slice(2)}`;};
+const fmtHM=s=>{const d=new Date(s*1000);return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;};
+const mmss=s=>`${Math.floor(s/60)}:${pad2(Math.floor(s%60))}`;
+const trimN=v=>String(+(+v).toFixed(4));
+const cylTxt=(g,t)=>GUNIT[g]==='ppb'?`${trimN(t/1000)} ppm = ${trimN(t)} ppb`:`${trimN(t)} ppm`;
+const cylShort=(g,t)=>`${trimN(GUNIT[g]==='ppb'?t/1000:t)} ppm`;
+function calErr(kind,g,target,v){if(v==null)return '';return kind==='zero'?`${csnum(v,gdec(g))} ${GUNIT[g]} from zero`:`${csnum((v-target)/target*100,1)}%`;}
+function setTxt(key,v,g){if(!v)return '—';return key==='zero'?`${cnum(v[0],5)} / ${cnum(v[1],5)} V`:`m ${cnum(v[0],4)} · c ${cnum(v[1],gdec(g))}`;}
+const setName=key=>key==='zero'?'Zero (WE₀ / AE₀)':'Gain & offset (m₃ · c₃)';
+const post=(path,body)=>api(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});
+
+// ---- who is signed in ----
+async function loadRole(){
+  try{ROLE=(await api('/api/whoami')).role;}catch(e){ROLE=null;}
+  $('#who').innerHTML=ROLE?`<span class="sub">Signed in as</span> ${ROLE==='manufacturer'?lvChip('manufacturer'):'<span class="lv lv-user">Client</span>'} <button class="btn ghost small" id="btnSwitch">Switch user</button>`:'';
+  const ox=$('#c_sensor button[data-sensor=ox]');if(ox)ox.textContent=glabel('ox');
+  if($('#view-calib').classList.contains('active')){loadCalibration();loadCalibCharts();}
+}
+document.addEventListener('click',async e=>{
+  if(e.target.id!=='btnSwitch')return;
+  AUTH='';try{sessionStorage.removeItem('bayu_auth');}catch(_){}
+  await showLogin();await loadConfig().catch(()=>{});await loadRole();
+});
+
+// ---- tab data ----
+async function loadCalibration(){
+  if(!ROLE)await loadRole();
+  try{
+    const [v,r,s]=await Promise.all([api('/api/calibration/values'),api('/api/calibration/records'),api('/api/calibration/session')]);
+    CALV=v;CALSET=v.settings||{};CALREC=r.records||[];
+    const msgs=[];
+    if(!v.set_up)msgs.push('Calibration isn’t set up on this logger yet. On the Pi, in the portal folder, run <code>python3 calibration.py init</code>.');
+    (v.errors||[]).forEach(x=>msgs.push(esc(x)));
+    $('#cal_banner').innerHTML=msgs.length?`<div class="banner ${v.set_up?'warn':'bad'}">${msgs.join('<br>')}</div>`:'';
+    $('#cal_new').disabled=!v.set_up;
+    renderCalValues();renderCalRecords();renderResume(s);
+  }catch(e){$('#cal_banner').innerHTML=`<div class="banner bad">${esc(errMsg(e))}</div>`;}
+}
+function renderResume(s){
+  const el=$('#cal_resume');
+  if(!s||!s.active||($('#ov_wiz').hidden===false)){el.innerHTML='';return;}
+  const ss=s.session;
+  el.innerHTML=`<div class="banner warn" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between">
+    <span>A ${ss.type} calibration (${esc(ss.gases.map(glabel).join(', '))}) is running, started ${fmtHM(ss.t0)} by ${esc(ss.by||'')}.</span>
+    <span style="display:flex;gap:8px"><button class="btn small" data-cact="resume">Continue</button><button class="btn ghost small" data-cact="w-cancel">Cancel calibration</button></span></div>`;
+}
+
+// ---- values in use (the server only sends what this login may see) ----
+const VTITLE={zero:'Zero (WE₀ / AE₀)',sens:'Sensitivity',out:'Gain & offset (m₃ · c₃)',op1:'OP1 (m₁ · c₁)',op2:'OP2 (m₂ · c₂)'};
+const VSHORT={zero:'Zero (V)',sens:'Sensitivity',out:'Gain & offset',op1:'OP1',op2:'OP2'};
+const VORDER=['zero','sens','out','op1','op2'];
+function vtxt(g,k,v){if(v==null)return null;return k==='zero'?`${cnum(v[0],4)} / ${cnum(v[1],4)} V`:k==='sens'?`${cnum(v,0)} mV/ppm`:`${cnum(v[0],3)} · ${cnum(v[1],k==='out'?gdec(g):4)}`;}
+function renderCalValues(){
+  const v=CALV;if(!v)return;
+  const gases=Object.keys(v.gases),cols=VORDER.filter(k=>gases.some(g=>v.gases[g][k]));
+  $('#cal_vhint').innerHTML=`Each value comes from the highest level that has one: ${lvChip('user')} → ${lvChip('manufacturer')} → ${lvChip('factory')}<br>Your calibrations save to ${lvChip(ROLE==='client'?'user':'manufacturer')}. Factory values are read-only.`;
+  $('#cal_vhead').innerHTML=`<tr><th>Gas</th>${cols.map(k=>`<th>${esc(VTITLE[k])}</th>`).join('')}<th></th></tr>`;
+  $('#cal_vbody').innerHTML=gases.map(g=>{
+    const row=v.gases[g],open=CEXP===g,has=(v.has||{})[g]||{};
+    let h=`<tr><td><b>${esc(glabel(g))}</b><div class="sub">${esc(gname(g))}</div></td>${cols.map(k=>row[k]
+      ?`<td><div class="cell"><span class="mono">${esc(vtxt(g,k,row[k].value))}</span>${lvChip(row[k].level)}</div></td>`:'<td class="sub">—</td>').join('')}
+      <td><button class="btn ghost small" data-cact="expand" data-g="${g}" aria-expanded="${open}">${open?'Hide levels':'All levels'}</button></td></tr>`;
+    if(open){
+      const acts=[];
+      if(ROLE==='client'&&has.user)acts.push(`<button class="btn ghost small" data-cact="reset" data-lv="user" data-g="${g}">Reset ${esc(glabel(g))} to manufacturer values</button>`);
+      if(ROLE==='manufacturer'){
+        if(has.user)acts.push(`<button class="btn ghost small" data-cact="reset" data-lv="user" data-g="${g}">Clear client values</button>`);
+        if(has.manufacturer)acts.push(`<button class="btn ghost small" data-cact="reset" data-lv="manufacturer" data-g="${g}">Reset to factory values</button>`);
+      }
+      const lcols=VORDER.filter(k=>row[k]);
+      h+=`<tr class="expand"><td colspan="${cols.length+2}"><div style="overflow-x:auto"><table class="lvtable"><thead><tr><th>Level</th>${lcols.map(k=>`<th>${esc(VSHORT[k])}</th>`).join('')}</tr></thead><tbody>
+        ${['user','manufacturer','factory'].map(lv=>`<tr><td>${lvChip(lv)}${lv==='factory'?' <span class="sub">read-only</span>':''}</td>${lcols.map(k=>{
+          const x=row[k].levels[lv],use=row[k].level===lv;
+          return x==null?'<td class="empty">—</td>':`<td class="${use?'use':''}"><span class="mono">${esc(vtxt(g,k,x))}</span>${use?' ✓':''}</td>`;}).join('')}</tr>`).join('')}
+        </tbody></table></div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">${acts.join('')||`<span class="sub">${ROLE==='client'?'You have no own values for this gas; it uses the manufacturer’s calibration.':'Nothing to reset for this gas.'}</span>`}</div></td></tr>`;
+    }
+    return h;
+  }).join('');
+}
+
+// ---- records ----
+function renderCalRecords(){
+  $('#cal_rec').innerHTML=CALREC.length?CALREC.map(r=>{
+    if(r.kind==='reset')return `<tr><td class="nw">${fmtT(r.t0)}</td><td>Reset</td><td>${esc(glabel(r.gases[0]))}</td><td>${esc(r.note||'')}</td><td>${passChip(null)}</td><td>${lvChip(r.level)}</td><td>${esc(r.by||'')}</td><td></td></tr>`;
+    const g=r.gases[0],res=r.results||{},one=r.gases.length===1;
+    const ba=one&&res[g]?`<span class="mono">${cnum(res[g].pre,gdec(g))} → ${cnum(res[g].post,gdec(g))} ${GUNIT[g]}</span>`:`<span class="sub">${r.gases.length} gases · see record</span>`;
+    const gas=r.kind==='zero'?r.gases.map(x=>glabel(x)).join(', '):`${glabel(g)} · ${cylShort(g,r.target)}`;
+    return `<tr><td class="nw">${fmtT(r.t0)}</td><td>${r.kind==='zero'?'Zero':'Span'}</td><td>${esc(gas)}</td><td>${ba}</td><td>${passChip(r.pass_all)}</td><td>${lvChip(r.level)}</td><td>${esc(r.by||'')}</td>
+      <td><button class="btn ghost small" data-cact="view" data-id="${r.id}">View</button></td></tr>`;
+  }).join(''):'<tr><td colspan="8" class="sub">No calibrations yet. Press <b>+ New calibration</b> for the first one.</td></tr>';
+}
+async function openRecord(id){
+  try{REC=await api('/api/calibration/records/'+id);}catch(e){toast(errMsg(e));return;}
+  RECG=REC.gases[0];renderRecord();openOv('#ov_rec');
+}
+function renderRecord(){
+  const r=REC,g0=r.gases[0],one=r.gases.length===1,i=r.info||{},zero=r.kind==='zero',dev=(CONFIG.device||{});
+  const rows=[['Type',zero?'Zero calibration':'Span calibration'],['Device ID',dev.id||'—'],['Gas',r.gases.map(x=>glabel(x)).join(', ')],
+    ['Gas value',zero?'0 ppm (zero air)':cylTxt(g0,r.target)],['Start time',fmtT(r.t0)],['End time',fmtT(r.t1)],
+    ['Gas flow rate',`${i.flow||'—'} SCCM`],['Gas pressure',`${i.pressure||'—'} bar`],['Temperature',`${i.temp||'—'} °C`],
+    ['Cylinder company',i.company||'—'],['Cylinder certificate no.',i.cert||'—'],['Pass limit',zero?'Zero ± limit per gas':`± ${r.tol}%`],['Done by',r.by||'—'],['Saved to',null]];
+  const info=rows.map(([k,v])=>`<div><dt>${k}</dt><dd>${k==='Saved to'?lvChip(r.level):esc(v)}</dd></div>`).join('');
+  const out=r.gases.map(g=>{const x=r.results[g];return `<tr><td><b>${esc(glabel(g))}</b></td><td class="mono">${zero?'0 ppm':esc(cylTxt(g,r.target))}</td>
+    <td class="mono">${cnum(x.pre,gdec(g))} ${GUNIT[g]} <span class="sub">(${calErr(r.kind,g,r.target,x.pre)})</span></td>
+    <td class="mono">${cnum(x.post,gdec(g))} ${GUNIT[g]} <span class="sub">(${calErr(r.kind,g,r.target,x.post)})</span></td><td>${passChip(x.pass)}</td></tr>`;}).join('');
+  const chgG=r.gases.filter(g=>r.results[g].after);
+  const client=ROLE==='client';
+  const chg=chgG.map(g=>{const x=r.results[g];return `<tr><td><b>${esc(glabel(g))}</b></td><td>${client?'Zero':esc(setName(x.key))}</td><td class="mono">${esc(setTxt(x.key,x.before,g))}</td><td class="mono">${esc(setTxt(x.key,x.after,g))}</td><td>${lvChip(r.level)}</td></tr>`;}).join('');
+  const gsel=one?'':`<div class="seg" role="group" aria-label="Gas to chart">${r.gases.map(g=>`<button data-recgas="${g}" class="${g===RECG?'on':''}" aria-pressed="${g===RECG}">${esc(glabel(g))}</button>`).join('')}</div>`;
+  $('#rec_dlg').innerHTML=`<div class="dlg-head"><div><h2 id="rec_title">${zero?'Zero calibration':`Span calibration · ${esc(glabel(g0))}`}</h2><div class="sub">Calibration record #${r.id}</div></div><button class="xbtn" data-cact="rec-close" aria-label="Close">✕</button></div>
+    <div class="box"><dl class="info">${info}</dl></div>
+    <div class="box"><h3>Calibration output</h3><div style="overflow-x:auto"><table style="min-width:560px"><thead><tr><th>Gas</th><th>Gas value</th><th>Pre-calibration</th><th>Post-calibration</th><th>Result</th></tr></thead><tbody>${out}</tbody></table></div></div>
+    ${chgG.length?`<div class="box"><h3>What changed</h3><div style="overflow-x:auto"><table style="min-width:560px"><thead><tr><th>Gas</th><th>Setting</th><th>${client?'Value before calibration':'Before'}</th><th>${client?'Value after calibration':'After'}</th><th>Level</th></tr></thead><tbody>${chg}</tbody></table></div></div>`:''}
+    <div class="box"><div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;margin-bottom:6px"><h3 style="margin:0">Calibration data</h3>${gsel}</div><div class="schart" id="rec_chart"></div></div>
+    <div class="dlg-foot"><div class="grp"><button class="btn ghost" data-cact="csv">Download data (CSV)</button><button class="btn ghost" data-cact="cert">Certificate</button></div><button class="btn" data-cact="rec-close">Close</button></div>`;
+  drawRecChart();
+}
+function chartOpts(kind,g,target,tol){
+  const zero=kind==='zero',zt=((CALSET.zero_pass||{})[g])??(GUNIT[g]==='ppm'?0.05:10);
+  return {goal:zero?0:target,tolAbs:zero?zt:target*tol/100,unit:GUNIT[g],dec:gdec(g),
+    goalLabel:zero?`zero ± ${trimN(zt)} ${GUNIT[g]}`:`gas value ${cylTxt(g,target)} ± ${trimN(tol)}%`};
+}
+function drawRecChart(){const r=REC,c=r.chart;if(!c)return;
+  drawSession($('#rec_chart'),{t:c.t,v:c[RECG],phase:c.phase,t0:c.t0,tApply:r.t_apply?r.t_apply-r.t0:null,...chartOpts(r.kind,RECG,r.target,r.tol)});}
+async function fetchAuthed(path){
+  const get=()=>fetch(path,{headers:AUTH?{Authorization:'Basic '+AUTH}:{}});
+  let r=await get();if(r.status===401){await showLogin();r=await get();}
+  if(!r.ok)throw new Error(await r.text());return r;
+}
+
+// ---- session chart: readings before | after the correction ----
+function drawSession(box,o){
+  box.replaceChildren();
+  const W=Math.max(260,box.clientWidth||600),HH=230,m={l:58,r:14,t:22,b:28},pw=W-m.l-m.r,ph=HH-m.t-m.b;
+  const pts=o.t.map((t,i)=>({t,v:o.v[i],p:o.phase[i]})).filter(p=>p.v!=null&&p.p!=='x');
+  const tmax=Math.max(o.tmin||60,pts.length?pts[pts.length-1].t:0);
+  const ys=pts.map(p=>p.v);
+  const yt=niceTicks(Math.min(...ys,o.goal-o.tolAbs),Math.max(...ys,o.goal+o.tolAbs),4);
+  const X=t=>m.l+t/tmax*pw,Y=v=>m.t+(1-(v-yt.lo)/(yt.hi-yt.lo))*ph;
+  const svg=svgEl('svg',{width:W,height:HH,viewBox:`0 0 ${W} ${HH}`,role:'img','aria-label':`Readings during calibration, ${o.unit}`},box);
+  yt.ticks.forEach(v=>{const y=Math.round(Y(v))+.5;svgEl('line',{x1:m.l,x2:W-m.r,y1:y,y2:y,style:'stroke:var(--line);stroke-width:1'},svg);
+    svgEl('text',{x:m.l-8,y,'text-anchor':'end','dominant-baseline':'middle'},svg).textContent=fmtTick(v,yt.step);});
+  svgEl('rect',{x:m.l,width:pw,y:Y(o.goal+o.tolAbs),height:Math.max(1,Y(o.goal-o.tolAbs)-Y(o.goal+o.tolAbs)),style:'fill:var(--band)'},svg);
+  const gy=Math.round(Y(o.goal))+.5;svgEl('line',{x1:m.l,x2:W-m.r,y1:gy,y2:gy,style:'stroke:var(--muted);stroke-width:1'},svg);
+  svgEl('text',{x:W-m.r,y:gy-5,'text-anchor':'end'},svg).textContent=o.goalLabel;
+  const step=[30,60,120,300,600,900,1800,3600].find(s=>tmax/s<=Math.max(2,pw/80))||3600;
+  for(let t=0;t<=tmax;t+=step){const x=X(t);if(x>W-m.r-16)break;svgEl('text',{x,y:HH-8,'text-anchor':'middle'},svg).textContent=fmtHM(o.t0+t);}
+  const ta=o.tApply!=null?o.tApply:null;
+  if(ta!=null&&ta<=tmax){const x=Math.round(X(ta))+.5;svgEl('line',{x1:x,x2:x,y1:m.t-14,y2:m.t+ph,style:'stroke:var(--ink);stroke-width:1;stroke-opacity:.55'},svg);
+    svgEl('text',{x:x-6,y:m.t-6,'text-anchor':'end'},svg).textContent='Before';
+    svgEl('text',{x:x+6,y:m.t-6,'text-anchor':'start',class:'lab'},svg).textContent='After correction';}
+  else svgEl('text',{x:m.l,y:m.t-6,'text-anchor':'start'},svg).textContent='Before correction';
+  ['b','a'].forEach(ph2=>{const seg=pts.filter(p=>p.p===ph2);if(seg.length>1)svgEl('path',{d:'M'+seg.map(p=>`${X(p.t).toFixed(1)},${Y(p.v).toFixed(1)}`).join('L'),fill:'none',
+    style:'stroke:var(--brand);stroke-width:2;stroke-linejoin:round;stroke-linecap:round'},svg);});
+  if(pts.length){const p=pts[pts.length-1];svgEl('circle',{cx:X(p.t),cy:Y(p.v),r:4,style:'fill:var(--brand);stroke:var(--panel);stroke-width:2'},svg);}
+  if(!pts.length)svgEl('text',{x:m.l+8,y:m.t+ph/2},svg).textContent='Waiting for readings…';
+  const cross=svgEl('line',{y1:m.t,y2:m.t+ph,visibility:'hidden',style:'stroke:var(--muted);stroke-width:1'},svg);
+  const dot=svgEl('circle',{r:4.5,visibility:'hidden',style:'fill:var(--brand);stroke:var(--panel);stroke-width:2'},svg);
+  const hit=svgEl('rect',{x:m.l,y:m.t,width:pw,height:ph,fill:'transparent'},svg);
+  const tip=document.createElement('div');tip.className='stip';tip.hidden=true;box.appendChild(tip);
+  hit.addEventListener('pointermove',e=>{if(!pts.length)return;const r=svg.getBoundingClientRect(),tv=((e.clientX-r.left)*W/r.width-m.l)/pw*tmax;
+    let best=pts[0];for(const p of pts)if(Math.abs(p.t-tv)<Math.abs(best.t-tv))best=p;
+    const x=X(best.t);cross.setAttribute('x1',x);cross.setAttribute('x2',x);cross.setAttribute('visibility','visible');dot.setAttribute('cx',x);dot.setAttribute('cy',Y(best.v));dot.setAttribute('visibility','visible');
+    tip.replaceChildren();const b=document.createElement('b');b.textContent=`${cnum(best.v,o.dec)} ${o.unit}`;const s=document.createElement('span');
+    s.textContent=`${fmtHM(o.t0+best.t)} · ${best.p==='a'?'after correction':'before correction'}`;tip.append(b,s);tip.hidden=false;
+    const tw=tip.offsetWidth;tip.style.left=(x+14+tw>W?Math.max(0,x-tw-14):x+14)+'px';});
+  hit.addEventListener('pointerleave',()=>{cross.setAttribute('visibility','hidden');dot.setAttribute('visibility','hidden');tip.hidden=true;});
+}
+
+// ---- New calibration wizard ----
+const STEP_OF={before:2,review:3,after:4};
+function newWizard(){
+  WZ={step:1,type:'span',gas:'so2',zeroGases:[...CAL_GASES],cyl:CYL_DEFAULT.so2,tol:CALSET.span_tolerance_pct||3,
+    flow:'2500',pressure:'0.5',temp:'',company:'',cert:'',err:'',st:null,view:null,timer:null,saved:null};
+  renderWizard();openOv('#ov_wiz');
+}
+function resumeWizard(s){
+  WZ={step:STEP_OF[s.session.phase]||2,type:s.session.type,gas:s.session.gases[0],zeroGases:s.session.gases,cyl:s.session.cyl_ppm,
+    tol:s.session.tol,err:'',st:s,view:s.session.gases[0],timer:null,saved:null};
+  renderWizard();openOv('#ov_wiz');startPoll();
+}
+function wizSteps(){const names=['Set up','Before','Apply','After','Save'];
+  return `<ol class="wsteps" aria-label="Steps">${names.map((n,i)=>{const k=i+1,c=k===WZ.step?'on':k<WZ.step?'done':'';
+    return `<li class="${c}" ${k===WZ.step?'aria-current="step"':''}><span>${k<WZ.step?'✓':k}</span>${n}</li>`;}).join('')}</ol>`;}
+function wizGases(){return WZ.st?WZ.st.session.gases:(WZ.type==='zero'?WZ.zeroGases:[WZ.gas]);}
+function readStep1(){
+  if(WZ.step!==1)return;const n=id=>{const e=$(id);return e?Number(String(e.value).replace('−','-')):NaN;};
+  if(WZ.type==='span'){WZ.cyl=n('#w_cyl');WZ.tol=n('#w_tol');}
+  WZ.flow=$('#w_flow').value;WZ.pressure=$('#w_pres').value;WZ.temp=$('#w_temp').value;WZ.company=$('#w_comp').value.trim();WZ.cert=$('#w_cert').value.trim();
+}
+function renderWizard(){
+  const w=WZ,lv=w.st?w.st.session.level:(ROLE==='client'?'user':'manufacturer');let body='',foot='';
+  const title=w.type==='zero'?'New zero calibration':`New span calibration · ${glabel(w.gas)}`;
+  if(w.step===1){
+    const pick=w.type==='zero'
+      ?`<div class="checks" role="group" aria-label="Gases to zero">${CAL_GASES.map(g=>`<label><input type="checkbox" data-zg="${g}" ${w.zeroGases.includes(g)?'checked':''}> ${esc(glabel(g))}</label>`).join('')}</div>`
+      :`<div class="seg" role="group" aria-label="Gas">${CAL_GASES.map(g=>`<button data-wgas="${g}" class="${g===w.gas?'on':''}" aria-pressed="${g===w.gas}">${esc(glabel(g))}</button>`).join('')}</div>`;
+    const conc=w.type==='zero'?'<div class="fixed">0 ppm (zero air, all selected gases)</div>'
+      :`<div class="unitwrap"><input id="w_cyl" inputmode="decimal" value="${esc(w.cyl)}" aria-label="Cylinder concentration in ppm"><span>ppm</span><span id="w_cyl_note">${GUNIT[w.gas]==='ppb'&&w.cyl>0?`= ${trimN(w.cyl*1000)} ppb`:''}</span></div>`;
+    const zp=CALSET.zero_pass||{};
+    body=`<div class="wform">
+      <div class="field"><label>Type</label><div class="seg" role="group" aria-label="Type"><button data-wtype="zero" class="${w.type==='zero'?'on':''}" aria-pressed="${w.type==='zero'}">Zero</button><button data-wtype="span" class="${w.type==='span'?'on':''}" aria-pressed="${w.type==='span'}">Span</button></div></div>
+      <div class="field"><label>${w.type==='zero'?'Gases':'Gas'}</label>${pick}</div>
+      <div class="field"><label>Cylinder concentration (ppm)</label>${conc}</div>
+      ${w.type==='span'?`<div class="field"><label for="w_tol">Pass if within (± %)</label><input id="w_tol" inputmode="decimal" value="${esc(w.tol)}"></div>`
+        :`<div class="field"><label>Pass if within</label><div class="fixed">${CAL_GASES.map(g=>`${esc(glabel(g))} ±${trimN(zp[g]??0)}`).join(' · ')}</div></div>`}
+      <div class="field"><label for="w_flow">Gas flow rate (SCCM)</label><input id="w_flow" inputmode="decimal" value="${esc(w.flow)}"></div>
+      <div class="field"><label for="w_pres">Gas pressure (bar)</label><input id="w_pres" inputmode="decimal" value="${esc(w.pressure)}"></div>
+      <div class="field"><label for="w_temp">Temperature (°C)</label><input id="w_temp" inputmode="decimal" value="${esc(w.temp)}"></div>
+      <div class="field"><label for="w_comp">Cylinder company</label><input id="w_comp" value="${esc(w.company)}" placeholder="e.g. supplier name"></div>
+      <div class="field"><label for="w_cert">Cylinder certificate no. <span class="req">(required)</span></label><input id="w_cert" value="${esc(w.cert)}" placeholder="from the cylinder label" required aria-required="true"></div>
+    </div>
+    <div class="callout">Connect the ${w.type==='zero'?'<b>zero air</b>':`<b>${esc(glabel(w.gas))} span gas</b>`} through the gas hood and open the valve, then press <b>Start recording</b>.</div>
+    <div class="werr" id="w_err" role="alert">${esc(w.err)}</div>`;
+    foot=`<button class="btn ghost" data-cact="w-close">Cancel</button><button class="btn" data-cact="w-start" ${w.cert?'':'disabled'}>Start recording</button>`;
+  }
+  else if(w.step===2||w.step===4){
+    const after=w.step===4,gs=wizGases();
+    body=`<div class="callout">${after?`Correction applied to ${lvChip(lv)}. Keep the gas flowing: the logger records again to check the result.`
+        :'Gas is flowing. Wait until every gas shows <b>Stable</b>, then press <b>Stop &amp; calculate</b>.'}
+      <span class="sub" style="display:block;margin-top:4px" id="w_time"></span></div>
+      <div class="progress" aria-hidden="true"><i id="w_prog"></i></div>
+      <div class="tiles">${gs.map(g=>`<button class="tile" id="tile_${g}" data-wview="${g}" aria-pressed="${g===w.view}"><span class="row2">${esc(glabel(g))}<span class="stv"></span></span><b></b></button>`).join('')}</div>
+      <div class="werr" id="w_hint"></div>
+      <div class="schart" id="w_chart"></div>`;
+    foot=after?`<button class="btn ghost" data-cact="w-cancel">Undo correction &amp; cancel</button><button class="btn" id="w_next" data-cact="w-save" disabled>Save record</button>`
+              :`<button class="btn ghost" data-cact="w-cancel">Cancel calibration</button><button class="btn" id="w_next" data-cact="w-stop" disabled>Stop &amp; calculate</button>`;
+  }
+  else if(w.step===3){
+    const ss=w.st.session,client=ROLE==='client',zero=ss.type==='zero';
+    const head=['Gas','Gas value','Pre-calibration'].concat(zero&&client?['Value before calibration','Value after calibration']:client?[]:['New setting']);
+    const rows=ss.gases.map(g=>{const r=ss.results[g];
+      const tail=zero&&client?`<td class="mono">${esc(setTxt('zero',r.before,g))}</td><td class="mono"><b>${esc(setTxt('zero',r.after,g))}</b></td>`
+        :client?'':`<td>${esc(setName(r.key))}<div class="mono sub">${esc(setTxt(r.key,r.before,g))} → <b style="color:var(--ink)">${esc(setTxt(r.key,r.after,g))}</b></div>${(r.warnings||[]).map(x=>`<div class="sub" style="color:var(--warn)">${esc(x)}</div>`).join('')}</td>`;
+      return `<tr><td><b>${esc(glabel(g))}</b></td><td class="mono">${zero?'0 ppm':esc(cylTxt(g,ss.target))}</td>
+        <td class="mono">${cnum(r.pre,gdec(g))} ${GUNIT[g]} <span class="sub">(${calErr(ss.type,g,ss.target,r.pre)})</span></td>${tail}</tr>`;}).join('');
+    const note=zero?'The new zero is the electrode voltages measured in zero air.':client?'':'The new gain is gas value ÷ reading.';
+    body=`<div class="callout">Pre-calibration is the average of the last ${Math.round((CALSET.pre_window_s||180)/60)} minutes. ${note}</div>
+      <div style="overflow-x:auto"><table style="min-width:${head.length>3?640:420}px"><thead><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>
+      ${(ss.warnings||[]).map(x=>`<div class="banner warn">${esc(x)}</div>`).join('')}
+      <div class="callout">This will be saved to the ${lvChip(lv)} level. ${lv==='user'?'The manufacturer and factory values are kept, and you can reset back to them at any time.':'The factory values are kept.'}</div>`;
+    foot=`<button class="btn ghost" data-cact="w-cancel">Cancel (nothing changed)</button><button class="btn" data-cact="w-apply">Apply correction</button>`;
+  }
+  else if(w.step===5){
+    const r=w.saved;
+    body=`<div class="callout"><b>Calibration saved</b> as record #${r.id}, to the ${lvChip(r.level)} level. The gas reader uses the new values from now on.</div>
+      <div style="overflow-x:auto"><table style="min-width:420px"><thead><tr><th>Gas</th><th>Before → after</th><th>Result</th></tr></thead><tbody>
+      ${r.gases.map(g=>{const x=r.results[g];return `<tr><td><b>${esc(glabel(g))}</b></td><td class="mono">${cnum(x.pre,gdec(g))} → ${cnum(x.post,gdec(g))} ${GUNIT[g]}</td><td>${passChip(x.pass)}</td></tr>`;}).join('')}</tbody></table></div>`;
+    foot=`<button class="btn ghost" data-cact="w-view">View record</button><button class="btn" data-cact="w-close">Done</button>`;
+  }
+  $('#wiz_dlg').innerHTML=`<div class="dlg-head"><div><h2 id="wiz_title">${esc(title)}</h2><div class="sub">Saves to ${lvChip(lv)}</div></div>
+      <button class="xbtn" data-cact="${w.step>=2&&w.step<=4?'w-hide':'w-close'}" aria-label="${w.step>=2&&w.step<=4?'Hide (the calibration keeps running)':'Close'}">✕</button></div>
+    ${wizSteps()}${body}<div class="dlg-foot"><span class="sub" id="w_need">${w.step===1&&!w.cert?'Enter the cylinder certificate no. to start recording.':''}</span><div class="grp">${foot}</div></div>`;
+  if(w.step===2||w.step===4)updateLive();
+}
+function updateLive(){
+  const w=WZ;if(!w||!w.st||!$('#w_next'))return;
+  const st=w.st,after=w.step===4,gs=st.session.gases;
+  gs.forEach(g=>{const t=$('#tile_'+g),o=st.gases[g];if(!t||!o)return;
+    t.querySelector('.stv').innerHTML=after?(o.pass==null||!st.can_save?'<span class="st warn">Recording…</span>':passChip(o.pass))
+      :(o.stable?'<span class="st ok">● Stable</span>':'<span class="st warn">Settling…</span>');
+    t.querySelector('b').textContent=o.current==null?'—':`${cnum(o.current,gdec(g))} ${GUNIT[g]}`;});
+  const minB=CALSET.min_before_s||180,minA=CALSET.min_after_s||180;
+  const doneA=Math.min(...gs.map(g=>st.gases[g].after_span_s||0));
+  $('#w_prog').style.width=(Math.min(1,after?doneA/minA:st.elapsed_s/minB)*100).toFixed(1)+'%';
+  $('#w_time').textContent=after?`After correction ${mmss(doneA)} recorded (at least ${mmss(minA)} needed)`:`Gas time ${mmss(st.elapsed_s)} (at least ${mmss(minB)})`;
+  const nx=$('#w_next');
+  if(after)nx.disabled=!st.can_save;
+  else{nx.disabled=!st.can_stop;nx.textContent=st.stop_unstable?'Stop anyway (not stable)':'Stop & calculate';}
+  $('#w_hint').textContent=st.hint||'';
+  const c=st.chart,ss=st.session;
+  drawSession($('#w_chart'),{t:c.t,v:c[w.view],phase:c.phase,t0:c.t0,tApply:ss.t_apply?ss.t_apply-ss.t0:null,
+    tmin:after?null:minB,...chartOpts(ss.type,w.view,ss.target,ss.tol)});
+}
+function startPoll(){stopPoll();WZ.timer=setInterval(pollWizard,2500);}
+function stopPoll(){if(WZ&&WZ.timer){clearInterval(WZ.timer);WZ.timer=null;}}
+async function pollWizard(){
+  if(!WZ||CALBUSY)return;
+  let st;try{st=await api('/api/calibration/session');}catch(e){return;}
+  if(!st.active){stopPoll();closeOv('#ov_wiz');toast('The calibration was ended.');loadCalibration();return;}
+  WZ.st=st;const step=STEP_OF[st.session.phase]||WZ.step;
+  if(step!==WZ.step){WZ.step=step;renderWizard();}else updateLive();
+}
+async function wizCall(fn){
+  if(CALBUSY)return;CALBUSY=true;
+  $$('#wiz_dlg .dlg-foot .btn').forEach(b=>b.disabled=true);
+  try{await fn();}catch(e){toast(errMsg(e));if(WZ)renderWizard();}finally{CALBUSY=false;}
+}
+
+// ---- modals ----
+let lastFocus=null;
+function openOv(id){lastFocus=document.activeElement;const o=$(id);o.hidden=false;const h=o.querySelector('h2');if(h){h.tabIndex=-1;h.focus();}}
+function closeOv(id){$(id).hidden=true;if(lastFocus&&lastFocus.focus)lastFocus.focus();}
+function hideWizard(){stopPoll();closeOv('#ov_wiz');loadCalibration();}
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
+  if(!$('#ov_wiz').hidden){if(WZ&&WZ.step>=2&&WZ.step<=4)hideWizard();else closeOv('#ov_wiz');}
+  else if(!$('#ov_rec').hidden)closeOv('#ov_rec');});
+$('#ov_rec').addEventListener('click',e=>{if(e.target.id==='ov_rec')closeOv('#ov_rec');});
+
+// ---- events ----
+$('#cal_new').onclick=()=>newWizard();
+document.addEventListener('click',async e=>{
+  const b=e.target.closest('button');if(!b)return;const d=b.dataset;
+  if(d.recgas){RECG=d.recgas;renderRecord();return;}
+  if(d.wtype){readStep1();WZ.type=d.wtype;WZ.err='';renderWizard();return;}
+  if(d.wgas){readStep1();WZ.gas=d.wgas;WZ.cyl=CYL_DEFAULT[d.wgas];renderWizard();return;}
+  if(d.wview){WZ.view=d.wview;renderWizard();return;}
+  switch(d.cact){
+    case 'expand':CEXP=CEXP===d.g?null:d.g;renderCalValues();break;
+    case 'reset':{
+      try{const r=await post('/api/calibration/reset',{gas:d.g,level:d.lv});
+        toast(`${glabel(d.g)}: ${LVN[d.lv]} values cleared. It now uses the ${LVN[r.now_uses]} values.`);}
+      catch(err){toast(errMsg(err));}
+      loadCalibration();break;}
+    case 'view':openRecord(+d.id);break;
+    case 'rec-close':closeOv('#ov_rec');break;
+    case 'csv':try{const r=await fetchAuthed(`/api/calibration/records/${REC.id}/data.csv`),blob=await r.blob();
+        const m=(r.headers.get('Content-Disposition')||'').match(/filename="([^"]+)"/),a=document.createElement('a');
+        a.href=URL.createObjectURL(blob);a.download=m?m[1]:`calibration-${REC.id}.csv`;document.body.appendChild(a);a.click();a.remove();
+        setTimeout(()=>URL.revokeObjectURL(a.href),2000);}catch(err){toast('Download failed: '+errMsg(err));}break;
+    case 'cert':try{const html=await (await fetchAuthed(`/api/calibration/records/${REC.id}/certificate`)).text();
+        const win=window.open('','_blank');if(!win){toast('Allow pop-ups for this page to open the certificate.');break;}
+        win.document.open();win.document.write(html);win.document.close();}catch(err){toast(errMsg(err));}break;
+    case 'resume':try{const s=await api('/api/calibration/session');if(s.active)resumeWizard(s);else loadCalibration();}catch(err){toast(errMsg(err));}break;
+    case 'w-close':stopPoll();closeOv('#ov_wiz');if(WZ&&WZ.step===5)toast(`Saved to the ${LVN[WZ.saved.level]} level.`);loadCalibration();break;
+    case 'w-hide':hideWizard();toast('The calibration keeps running. Use Continue to go back to it.');break;
+    case 'w-start':readStep1();
+      if(!WZ.cert){WZ.err='Enter the cylinder certificate no. before you start recording.';renderWizard();break;}
+      wizCall(async()=>{const st=await post('/api/calibration/session/start',{type:WZ.type,gases:WZ.type==='zero'?WZ.zeroGases:[WZ.gas],
+        cyl_ppm:WZ.cyl,tol:WZ.tol,flow:WZ.flow,pressure:WZ.pressure,temp:WZ.temp,company:WZ.company,cert:WZ.cert});
+        WZ.st=st;WZ.view=st.session.gases[0];WZ.step=2;renderWizard();startPoll();});break;
+    case 'w-stop':wizCall(async()=>{WZ.st=await post('/api/calibration/session/stop');WZ.step=3;renderWizard();});break;
+    case 'w-apply':wizCall(async()=>{WZ.st=await post('/api/calibration/session/apply');WZ.step=4;renderWizard();});break;
+    case 'w-save':wizCall(async()=>{const r=await post('/api/calibration/session/save');stopPoll();WZ.saved=r.saved;WZ.step=5;renderWizard();loadCalibration();});break;
+    case 'w-cancel':wizCall(async()=>{const r=await post('/api/calibration/session/cancel');stopPoll();closeOv('#ov_wiz');
+        toast(r.undone?'Correction removed. The values are back to what they were.':'Calibration cancelled. Nothing was changed.');loadCalibration();});break;
+    case 'w-view':{const id=WZ.saved.id;stopPoll();closeOv('#ov_wiz');openRecord(id);break;}
+  }
+});
+document.addEventListener('input',e=>{
+  if(e.target.id==='w_cert'){const v=e.target.value.trim(),b=$('[data-cact=w-start]'),n=$('#w_need');if(b)b.disabled=!v;if(n)n.textContent=v?'':'Enter the cylinder certificate no. to start recording.';}
+  if(e.target.id==='w_cyl'&&WZ){const v=Number(String(e.target.value).replace('−','-')),n=$('#w_cyl_note');if(n)n.textContent=GUNIT[WZ.gas]==='ppb'&&isFinite(v)&&v>0?`= ${trimN(v*1000)} ppb`:'';}
+});
+document.addEventListener('change',e=>{
+  const g=e.target.dataset&&e.target.dataset.zg;if(!g||!WZ)return;readStep1();
+  WZ.zeroGases=CAL_GASES.filter(x=>x===g?e.target.checked:WZ.zeroGases.includes(x));renderWizard();
+});
+window.addEventListener('resize',()=>{clearTimeout(window.__calrs);window.__calrs=setTimeout(()=>{if(!$('#ov_rec').hidden&&REC)drawRecChart();if(WZ&&!$('#ov_wiz').hidden&&(WZ.step===2||WZ.step===4))updateLive();},150);});
+setInterval(()=>{if($('#view-calib').classList.contains('active')&&$('#ov_wiz').hidden&&!document.hidden)loadCalibration();},30000);
+
 // ---- boot ----
-refreshStatus();loadConfig();startLive();
+refreshStatus();loadConfig().then(loadRole).catch(()=>{});startLive();
 setInterval(refreshStatus,5000);
 </script>
 </body>

@@ -13,11 +13,13 @@ Design notes
 * Readings are kept in a local SQLite history (storage.py). The reader saves
   gas; this app saves particulate + weather from its MQTT subscriber, prunes
   old rows, and serves the History tab (/api/history/*).
+* Two logins (auth.py): Client (the portal login in config.yaml) and
+  Manufacturer. Calibration (calibration_api.py) saves to the User or
+  Manufacturer level of calibration.py accordingly.
 """
 import asyncio
 import json
 import os
-import secrets
 import shutil
 import subprocess
 import threading
@@ -28,11 +30,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Query, WebSocket, status
+from fastapi import Depends, FastAPI, HTTPException, Query, WebSocket
 from fastapi.responses import FileResponse, StreamingResponse
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 
+from auth import require_login
+from calibration_api import router as calibration_router
 from config import deep_merge, load_config, save_config
 from storage import STREAMS, csv_chunks, json_path, open_store, reading_ts, storage_settings
 
@@ -40,29 +43,20 @@ BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 
 app = FastAPI(title="Bayu Logger Portal", version="1.0.0")
-security = HTTPBasic(auto_error=False)
+app.include_router(calibration_router)  # /api/calibration/*
 
 
 # --------------------------------------------------------------------------
-# Auth — HTTP Basic against config.portal. Empty password disables it (dev).
+# Auth — HTTP Basic, Client or Manufacturer login (auth.py). Both may use the
+# settings tabs; calibration permissions differ (see calibration_api.py).
 # --------------------------------------------------------------------------
-def require_admin(creds: HTTPBasicCredentials = Depends(security)):
-    portal = load_config().get("portal", {})
-    want_user = portal.get("username") or ""
-    want_pass = portal.get("password") or ""
-    if not want_pass:
-        return  # auth disabled
-    ok = (
-        creds is not None
-        and secrets.compare_digest(creds.username, want_user)
-        and secrets.compare_digest(creds.password, want_pass)
-    )
-    if not ok:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
-            headers={"WWW-Authenticate": "Basic"},
-        )
+def require_admin(role: str = Depends(require_login)) -> str:
+    return role
+
+
+@app.get("/api/whoami")
+def whoami(role: str = Depends(require_login)):
+    return {"role": role}
 
 
 # --------------------------------------------------------------------------
@@ -765,36 +759,6 @@ def live_broker_put(body: dict):
     _start_live_subscriber()  # reconnect with the new settings
     time.sleep(1.5)  # brief moment to report the outcome
     return {"ok": True, "connected": LIVE.get("connected", False)}
-
-
-@app.post("/api/calibrate/zero", dependencies=[Depends(require_admin)])
-def api_zero_cal():
-    """
-    Run the zero-calibration routine: stop the reader (I2C contention), run
-    zero_cal.py, then restart. zero_cal.py should print JSON of the new zeros;
-    we merge them back into config.sensors.
-    """
-    cfg = load_config()
-    svc = cfg.get("service", {}).get("name")
-    if svc:
-        _run(["sudo", "systemctl", "stop", svc])
-    code, out = _run(["python3", "zero_cal.py", "--json"], timeout=120)
-    if svc:
-        _run(["sudo", "systemctl", "start", svc])
-    zeros = None
-    try:
-        zeros = json.loads(out.strip().splitlines()[-1])
-    except Exception:
-        pass
-    if zeros:
-        sensors = cfg.get("sensors", {})
-        for key, z in zeros.items():
-            if key in sensors:
-                sensors[key].update(
-                    {k: z[k] for k in ("we_zero_v", "ae_zero_v") if k in z}
-                )
-        save_config(cfg)
-    return {"ok": code == 0, "zeros": zeros, "detail": out.strip()[-1000:]}
 
 
 # --------------------------------------------------------------------------

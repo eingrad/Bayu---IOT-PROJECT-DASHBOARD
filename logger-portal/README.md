@@ -8,20 +8,19 @@ Browser  ──HTTP/WS──▶  FastAPI portal (app.py)  ──reads/writes─�
                                 │                                       ▲
                                 │ systemctl restart                     │ loads
                                 ▼                                       │
-                         reader.py (gas-monitor.service) ──────────────┘
-                                │ writes latest reading + appends every reading
-                                ▼
-                         status_file  ──streamed to the Live view
-                         data/bayu.db ──History + Calibration charts (SQLite)
+             4_gas_reader.py (gas-monitor.service) ─────────────┘
+                     │  ▲ calibration/ (factory -> manufacturer -> user levels)
+                     ▼
+              data/bayu.db  ──History + Calibration tabs (SQLite)
 ```
 
-**One config, one source of truth:** the portal edits `config.yaml`, the reader
-loads it, and a service restart applies changes.
+**One config, one source of truth:** the portal edits `config.yaml` and the
+calibration levels; the gas reader re-checks both every cycle.
 
 ### Data sources on this device
 | Stream | Produced by | Configured in the portal via |
 |--------|-------------|------------------------------|
-| **Gas** (CO/SO₂/NO₂/O₃) | Python reader — `gas-monitor.service` | Calibration + Gas tabs (`config.yaml`) |
+| **Gas** (CO/SO₂/NO₂/O₃) | `gas-monitor/4_gas_reader.py` — `gas-monitor.service` | Calibration tab (`calibration/`) + System tab (`config.yaml`) |
 | **Particulate + Weather** | **Node-RED flows** (`mqtt out`) | inside Node-RED (portal restarts it / edits the broker connection) |
 | **MQTT broker** | **HiveMQ Cloud** (external) | Broker tab — edits the Node-RED `mqtt-broker` connection node |
 
@@ -37,7 +36,7 @@ with no internet:
 
 | Stream | Saved by | Offline? |
 |--------|----------|----------|
-| **Gas** | `reader.py`, right after each sample, before publishing | ✓ keeps saving with no network |
+| **Gas** | `4_gas_reader.py`, right after each sample, before publishing | ✓ keeps saving with no network |
 | **Particulate + Weather** | the portal, as each message arrives on the live broker | only while the portal can reach that broker; point Node-RED and the portal at the local broker to record through an internet outage |
 
 * One row per reading, stored as the JSON that was published, so new fields are
@@ -47,13 +46,37 @@ with no internet:
   deleted hourly. Change it in **History → Local storage**.
 * Gas at the default 20 s interval is about 1.5 MB/day (≈ 135 MB for 90 days).
 
+## Calibration (three levels, zero and span)
+Every calibration value has three levels. The reader uses the highest one that
+has a value; a higher level never deletes the ones below it.
+
+| Level | File | Who changes it |
+|-------|------|----------------|
+| **User** | `calibration/user.yaml` | the **Client** login (the portal login in `config.yaml`) |
+| **Manufacturer** | `calibration/manufacturer.yaml` | the **Manufacturer** login (`python3 auth.py set-manufacturer <name>`) |
+| **Factory** | `calibration/factory.yaml` | nobody in the portal: datasheet values, read-only, always complete |
+
+Per gas: zero (WE₀/AE₀), signed sensitivity, and straight-line corrections
+`WE = m₁·OP1 + c₁`, `AE = m₂·OP2 + c₂`, `final = m₃·reading + c₃` (O₃: m₄, c₄).
+With every m = 1 and c = 0 the result is the plain Alphasense formula.
+
+**Calibration tab → + New calibration** runs a zero (zero air, several gases) or
+span (one gas, cylinder value in ppm) calibration in five steps: set up (cylinder
+certificate no. required) → before (reader samples every 5 s; wait for *Stable*)
+→ apply (new zero, or new gain = gas value ÷ reading) → after (records again to
+check) → save. Each run is kept as a calibration record with the cylinder
+details, pre/post values, pass/fail, its readings (CSV) and a printable
+certificate. The Client never receives gains/offsets from the API.
+
+Timings and limits can be tuned in `config.yaml → calibration:`.
+
 ## v1 scope
 | Tab | Does |
 |-----|------|
 | **Overview** | Health: service state, uptime, CPU temp, storage, I²C devices, last-report age |
 | **Live & Diagnostics** | Real-time readings incl. raw electrode voltages; I²C bus scan |
 | **History** | Charts + table of saved readings (gas / particulate / weather), time-range picker, CSV download, retention setting |
-| **Calibration** | Per-sensor charts of WE/AE electrode voltages and concentration (with spread, drift and a zero line), zero-calibration wizard (runs `zero_cal.py`), per-sensor sensitivity/zeros/thresholds |
+| **Calibration** | Zero/span calibration wizard and records, values in use per level (with resets), electrode-voltage charts, alert thresholds |
 | **Connectivity** | MQTT broker settings + **Test connection** |
 | **System** | Start/stop/restart reader, sampling settings, live log viewer |
 
@@ -63,7 +86,12 @@ with no internet:
 | `config.yaml` | Shared device settings (portal + reader) |
 | `config.py` | Atomic load/save + deep-merge |
 | `app.py` | FastAPI REST + WebSocket + serves the UI |
-| `reader.py` | Config-driven refactor of `BAYU_SENSE_READER.py` |
+| `../gas-monitor/4_gas_reader.py` | The gas reader that runs as `gas-monitor.service` |
+| `calibration.py` | Calibration levels + the y = mx + c calculation (shared by reader and portal) |
+| `calibration_api.py` | Calibration tab API: wizard, records, CSV, certificate |
+| `auth.py` | Client + Manufacturer logins |
+| `calibration/` | Level files, manufacturer login hash, running-session file (on the Pi only, git-ignored) |
+| `reader.py` | Older config-driven reader (not used by `gas-monitor.service`) |
 | `storage.py` | Local SQLite history (shared by the reader and the portal) |
 | `data/bayu.db` | The history database, created on first run (git-ignored) |
 | `static/index.html` | Self-contained portal UI (no build step, offline) |
@@ -106,26 +134,31 @@ sudo apt install -y avahi-daemon
 # now visit  http://<pi-hostname>.local/   from any device on the LAN
 ```
 
-### Point the reader at this config
-Run `reader.py` from `gas-monitor.service` (or symlink your existing
-`BAYU_SENSE_READER.py` to this refactor). It reads `/opt/bayu-portal/config.yaml`
-by default (override with the `BAYU_CONFIG` env var).
+### Gas reader and calibration (once per logger)
+`gas-monitor.service` runs `gas-monitor/4_gas_reader.py`, which loads the
+portal's `config.yaml` (`/home/adminpi4/logger-portal/config.yaml`, override with
+`BAYU_CONFIG`) and imports `calibration.py` / `storage.py` from the same folder.
 
-Gas history is only saved by this `reader.py`, so the old `BAYU_SENSE_READER.py`
-won't fill the History tab (except gas copies the portal receives over MQTT).
+```bash
+cd /home/adminpi4/logger-portal
+python3 calibration.py init                      # creates calibration/, moves zeros out of config.yaml
+python3 auth.py set-manufacturer <username>      # asks for the manufacturer password
+sudo chown root: calibration/factory.yaml        # keep factory values read-only
+sudo systemctl restart gas-monitor.service bayu-portal.service
+```
+
 Run `gas-monitor.service` as the **same user as the portal** (`User=` in
-`bayu-portal.service`): both write to `data/bayu.db`, and a database created by
-`root` can't be written by the portal user. If it already happened:
-`sudo chown -R <portal-user>: <portal dir>/data`.
+`bayu-portal.service`): both write to `data/bayu.db` and `calibration/`.
+If files were created by `root`: `sudo chown -R <portal-user>: data calibration`
+(then re-apply the factory.yaml step).
 
 ## Security notes (before production)
 - Set a real password under `portal:` in `config.yaml` (empty = auth off).
 - Put nginx in front with a **self-signed HTTPS** cert; bind portal to `127.0.0.1`
   and let nginx serve `0.0.0.0:443`.
 - Keep it **LAN-only** (firewall the port off the internet).
-- `zero_cal.py` must accept `--json` and print the new zeros as the last line,
-  e.g. `{"co":{"we_zero_v":0.33,"ae_zero_v":0.28}, ...}`.
+- Keep MQTT and portal passwords in `config.yaml` on the Pi only; never commit them.
 
 ## Not in v1 (good next steps)
 WiFi/network config UI · store-and-forward (re-send saved readings to the cloud after an outage) · OTA update ·
-config backup/restore · role-based access · first-boot wizard.
+config backup/restore · manual entry of OP1/OP2/sensitivity per level · calibration due reminders · first-boot wizard.

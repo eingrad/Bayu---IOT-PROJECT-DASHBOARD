@@ -30,3 +30,6 @@ dist-ssr
 
 # Logger portal: local SQLite history (lives on the Pi, never committed)
 logger-portal/data/
+
+# Logger portal: calibration levels, manufacturer login hash, session file (per device, never committed)
+logger-portal/calibration/
