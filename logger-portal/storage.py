@@ -44,6 +44,15 @@ CREATE TABLE IF NOT EXISTS readings (
     payload TEXT    NOT NULL    -- the report as published (JSON)
 );
 CREATE UNIQUE INDEX IF NOT EXISTS ux_readings_stream_ts ON readings(stream, ts);
+-- Calibration records (zero/span sessions and resets). Never pruned.
+CREATE TABLE IF NOT EXISTS calibrations (
+    id      INTEGER PRIMARY KEY,
+    ts      INTEGER NOT NULL,   -- when the calibration started
+    kind    TEXT    NOT NULL,   -- zero | span | reset
+    level   TEXT    NOT NULL,   -- user | manufacturer
+    by_user TEXT,
+    data    TEXT    NOT NULL    -- the full record (JSON), including its readings
+);
 """
 
 
@@ -209,6 +218,18 @@ class Store:
         """Chart data: readings bucketed into at most `points` time slots, with
         the mean, min and max of each field per slot. When the range is short
         enough every slot holds one reading, i.e. the raw data."""
+        conn = self._connect()
+        try:
+            # Size the slots to the span that actually has data, so a recording
+            # that started recently isn't averaged as if it covered the whole range.
+            first = conn.execute(
+                "SELECT MIN(ts) FROM readings WHERE stream = ? AND ts >= ? AND ts < ?",
+                (stream, start, end),
+            ).fetchone()[0]
+        finally:
+            conn.close()
+        if first is not None:
+            start = max(start, first)
         bucket = max(1, math.ceil((end - start) / max(1, points)))
         cols, params = [], []
         for i, key in enumerate(fields):
@@ -254,6 +275,42 @@ class Store:
                 (stream, start, end),
             ):
                 yield ts, json.loads(payload)
+        finally:
+            conn.close()
+
+    # -- calibration records -----------------------------------------------
+    def add_calibration(self, record: dict) -> int:
+        conn = self._connect()
+        try:
+            cur = conn.execute(
+                "INSERT INTO calibrations (ts, kind, level, by_user, data) VALUES (?, ?, ?, ?, ?)",
+                (int(record["t0"]), record["kind"], record["level"], record.get("by"),
+                 json.dumps(record, separators=(",", ":"))),
+            )
+            conn.commit()
+            return cur.lastrowid
+        finally:
+            conn.close()
+
+    def list_calibrations(self, limit: int = 200) -> list:
+        conn = self._connect()
+        try:
+            # json_remove drops the stored readings so the list stays light.
+            return [
+                dict(json.loads(data), id=rid)
+                for rid, data in conn.execute(
+                    "SELECT id, json_remove(data, '$.data') FROM calibrations "
+                    "ORDER BY ts DESC, id DESC LIMIT ?", (limit,)
+                )
+            ]
+        finally:
+            conn.close()
+
+    def get_calibration(self, rid: int) -> Optional[dict]:
+        conn = self._connect()
+        try:
+            row = conn.execute("SELECT data FROM calibrations WHERE id = ?", (rid,)).fetchone()
+            return dict(json.loads(row[0]), id=rid) if row else None
         finally:
             conn.close()
 
