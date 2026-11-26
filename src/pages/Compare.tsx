@@ -2,6 +2,7 @@ import PageBreadcrumb from "../components/common/PageBreadCrumb";
 import PageMeta from "../components/common/PageMeta";
 import { useState } from "react";
 import stationImg from "../icons/try.png";
+import { clampDisplay } from "../components/utils/clamp";
 
 type Station = {
   id: string;
@@ -79,12 +80,13 @@ export default function Compare() {
       <div className="gap-x-6 lg:gap-x-16 gap-y-28 grid grid-cols-1 lg:grid-cols-2 mx-auto mt-24 px-4 max-w-5xl">
         {selected.map((selId, idx) => {
           const dev = getStation(selId);
+          // Floor negatives at 0 for display; temperature is left untouched.
           const metrics = [
             { label: "Temperature", value: `${dev.temperature}°C` },
-            { label: "Humidity", value: `${dev.humidity}%` },
-            { label: "PM2.5", value: `${dev.pm25} µg/m³` },
-            { label: "PM10", value: `${dev.pm10} µg/m³` },
-            { label: "TSP", value: `${dev.tsp} µg/m³` },
+            { label: "Humidity", value: `${clampDisplay("humidity", dev.humidity)}%` },
+            { label: "PM2.5", value: `${clampDisplay("pm25", dev.pm25)} µg/m³` },
+            { label: "PM10", value: `${clampDisplay("pm10", dev.pm10)} µg/m³` },
+            { label: "TSP", value: `${clampDisplay("tsp", dev.tsp)} µg/m³` },
           ];
 
           return (

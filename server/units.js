@@ -59,7 +59,7 @@ function absoluteHumidity(rh, tempC) {
 
 // Convert a stored (native-unit) value into the chosen display unit.
 // ctx.temperature (°C) is used for absolute-humidity conversion.
-function convert(field, value, toUnit, ctx = {}) {
+function convertRaw(field, value, toUnit, ctx = {}) {
   if (value === null || value === undefined || isNaN(value)) return value;
   const v = Number(value);
   const native = NATIVE[field];
@@ -101,6 +101,18 @@ function convert(field, value, toUnit, ctx = {}) {
   }
 
   return round(v);
+}
+
+// Public conversion used by all report/download endpoints. It wraps the raw
+// unit conversion with the product-wide display rule: a negative reading is
+// shown as 0 everywhere, EXCEPT temperature (which can be genuinely sub-zero).
+// Applied to the OUTPUT value only — raw DB values are never changed.
+function convert(field, value, toUnit, ctx = {}) {
+  const out = convertRaw(field, value, toUnit, ctx);
+  if (!/temp/i.test(field) && typeof out === "number" && Number.isFinite(out)) {
+    return Math.max(0, out);
+  }
+  return out;
 }
 
 // The display unit for a field, given the user's saved preferences map.

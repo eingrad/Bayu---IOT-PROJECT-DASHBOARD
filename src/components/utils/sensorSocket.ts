@@ -1,4 +1,5 @@
 import { wsUrl } from "../../config/api";
+import { clampReadings } from "./clamp";
 type DataListener = (data: any, topic: string) => void;
 
 const listeners = new Set<DataListener>();
@@ -21,7 +22,10 @@ export function startSensorSocket() {
   socket.onmessage = (event) => {
     try {
       const { topic, data } = JSON.parse(event.data);
-      const parsed = JSON.parse(data);
+      // Floor negative readings at 0 for display (temperature excluded); the
+      // raw values remain untouched in the database. All live cards and charts
+      // subscribe here, so clamping once covers every live surface.
+      const parsed = clampReadings(JSON.parse(data));
       lastByTopic.set(topic, parsed);
       listeners.forEach((cb) => cb(parsed, topic));
     } catch (err) {

@@ -1,4 +1,5 @@
 import { API_BASE } from "../config/api";
+import { clampDisplay } from "../components/utils/clamp";
 import { useEffect, useRef, useState } from "react";
 import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
@@ -159,18 +160,19 @@ export default function MapComponent() {
     openDevice(next);
   };
 
+  // Floor negatives at 0 for display; temperature is left as-is (can be sub-zero).
   const params: [string, any, string][] = info
     ? [
-        ["PM2.5", info.pm25, "µg/m³"],
-        ["PM10", info.pm10, "µg/m³"],
-        ["TSP", info.tsp, "µg/m³"],
-        ["CO", info.co, "ppm"],
-        ["SO₂", info.so2, "ppb"],
-        ["O₃", info.o3, "ppb"],
-        ["NO₂", info.no2, "ppb"],
-        ["Humidity", info.humidity, "%"],
+        ["PM2.5", clampDisplay("pm25", info.pm25), "µg/m³"],
+        ["PM10", clampDisplay("pm10", info.pm10), "µg/m³"],
+        ["TSP", clampDisplay("tsp", info.tsp), "µg/m³"],
+        ["CO", clampDisplay("co", info.co), "ppm"],
+        ["SO₂", clampDisplay("so2", info.so2), "ppb"],
+        ["O₃", clampDisplay("o3", info.o3), "ppb"],
+        ["NO₂", clampDisplay("no2", info.no2), "ppb"],
+        ["Humidity", clampDisplay("humidity", info.humidity), "%"],
         ["Temperature", info.temperature, "°C"],
-        ["Pressure", info.pressure, "hPa"],
+        ["Pressure", clampDisplay("pressure", info.pressure), "hPa"],
       ]
     : [];
 
